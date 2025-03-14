@@ -1,35 +1,274 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<title>Swaggy app</title>
-		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
-		<link rel="stylesheet" type="text/css" href="style.css">
-	</head>
-	<body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js GLTF Loader</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0);
+            display: none;
+            justify-content: flex-end;
+            align-items: center;
+        }
+        .card {
+            width: 50%;
+            height: 400px;
+            background: white;
+            border-radius: 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            margin: 50px;
+        }
 
-		<div id="project_card">
-			<h1 id="title">placeholder</h1>
-			<div class="gallery-container">
-				<ul class="mosaic-gallery">
-					
-					
-				</ul>
+        .close-btn {
+            top: 10px;
+            right: 10px;
+            background: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
 
-			<!-- x button to close -->
-			<button id="close_button" class="btn btn-danger">X</button>
-			</div>
-		</div>
+        @media (max-width: 768px) {
+            .overlay {
+                justify-content: center;
+                align-items: flex-end;
+            }
+            .card {
+                width: 100%;
+                height: 50%; /* Adjust this value to change the height of the card on mobile */
+                margin: 0;
+                border-radius: 10px 10px 0 0;
+            }
+        }
+    </style>
+    </head>
+    <body>
+        <div class="overlay">
+            <div class="card">
+                <button class="close-btn" onclick="closeOverlay()">X</button>
+                <h2>Card Title</h2>
+                <p>Card content goes here...</p>
+            </div>
+        </div>
+        <script>
+            function closeOverlay() {
+                document.querySelector('.overlay').style.display = 'none';
+            }
+        </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-		
+        // Enable shadows in the renderer
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        // Lighting
+        const light = new THREE.HemisphereLight(0xffffff, 0x444444);
+        light.position.set(0, 200, 0);
+        scene.add(light);
+
+        // Add this after your scene is created
+        const axesHelper = new THREE.AxesHelper(5); // The parameter is the length of the axes
+        scene.add(axesHelper);
+
+        // OrbitControls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+        controls.dampingFactor = 0.25;
+        controls.screenSpacePanning = false;
+        controls.maxPolarAngle = Math.PI / 2;
+
+        const onKeyDown = function (event) {
+            switch (event.code) {
+                case 'Enter':
+                    const lookDirection = camera.getWorldDirection(new THREE.Vector3()).normalize();
+                    const lookAtPoint = new THREE.Vector3().copy(camera.position).add(lookDirection);
+                    console.log("look at", lookAtPoint);
+                    camera.lookAt(lookAtPoint);
+                
+                    break;
+            }
+        };
+
+        document.addEventListener('keydown', onKeyDown, false);
+
+        // Raycaster for detecting clicks
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Load GLTF model
+        const loader = new THREE.GLTFLoader();
+        loader.load('data/models/photoboot.glb', function (gltf) {
+            gltf.scene.traverse(function (node) {
+                if (node.isMesh) {
+                    node.castShadow = true;
+                    node.receiveShadow = true;
+                    console.log("mesh added");
+                }
+            });
+            scene.add(gltf.scene);
+            gltf.scene.position.set(0, -4, 0);
+            gltf.scene.scale.set(1, 1, 1);
+
+            // Add event listener for clicks and touch events
+            window.addEventListener('click', onMouseClick, false);
+            window.addEventListener('touchstart', onTouchStart, false);
+
+            function onMouseClick(event) {
+                handleClick(event.clientX, event.clientY);
+            }
+
+            function onTouchStart(event) {
+                if (event.touches.length > 0) {
+                    handleClick(event.touches[0].clientX, event.touches[0].clientY);
+                }
+            }
+
+            function calculateResponsiveValues() {
+                const aspectRatio = window.innerWidth / window.innerHeight;
+                let step_left = aspectRatio < 1 ? 0 : 3.5 * Math.min(1, aspectRatio - 1);
+                let zoom = window.innerWidth < 768 ? 5 : 4;
+                let step_up = window.innerWidth < 768 ? -5.5 : -4;
+                console.log("step_left", step_left, "zoom", zoom, "aspectRatio", aspectRatio);
+                return { step_left, zoom, step_up };
+            }
+
+            function handleClick(clientX, clientY) {
+                
+
+                // Calculate mouse position in normalized device coordinates
+                mouse.x = (clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+
+                // Update the raycaster with the camera and mouse position
+                raycaster.setFromCamera(mouse, camera);
+
+                // Calculate objects intersecting the ray
+                const intersects = raycaster.intersectObjects(gltf.scene.children, true);
+
+                for (let i = 0; i < 1; i++) {
+                    const intersect = intersects[i];
+                    console.log(intersect.object.name);
+                    if (intersect.object.name.includes('Paper')) {
+                        
+                        // Animate the overlay appearance
+                        const overlay = document.querySelector('.overlay');
+                        overlay.style.opacity = 0;
+                        overlay.style.display = 'flex';
+                        new TWEEN.Tween(overlay.style)
+                            .to({ opacity: 1 }, 500) // 500ms for the animation duration
+                            .easing(TWEEN.Easing.Quadratic.InOut)
+                            .start();
 
 
-		<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
-		<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB" crossorigin="anonymous"></script>
-		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
-		<script src="https://cdn.jsdelivr.net/npm/masonry-layout@4.2.2/dist/masonry.pkgd.min.js" integrity="sha384-GNFwBvfVxBkLMJpYMOABq3c+d3KnQxudP/mGPkzpZSTYykLBNsZEnG2D9G/X/+7D" crossorigin="anonymous" async></script>
-		<script type="module" src="/main.js"></script>
-	</body>
+                        // Move the camera in front of the poster with animation
+                        const posterPosition = intersect.object.position;
+                        //let step_x = 0, step_y = 0, step_z = 5;
+                        const { step_left, zoom, step_up } = calculateResponsiveValues();
+                        let targetPosition = {
+                            x: posterPosition.x,
+                            y: posterPosition.y + step_up,
+                            z: posterPosition.z
+                        };
+                        let posterPosition_tmp = {
+                            x: posterPosition.x,
+                            y: posterPosition.y + step_up,
+                            z: posterPosition.z
+                        };
+                        
+                        if (intersect.object.name.includes('Front')) {
+                            step_z = 5;
+                        } else if (intersect.object.name.includes('Left')) {// TODO make responsive
+                            targetPosition.x = posterPosition.x + step_left;
+                            posterPosition_tmp.x = posterPosition.x + step_left;
+                            targetPosition.z = posterPosition.z + zoom;
+                        } else if (intersect.object.name.includes('Right')) {
+                            targetPosition.x = posterPosition.x - step_left;
+                            posterPosition_tmp.x = posterPosition.x - step_left ;
+                            targetPosition.z = posterPosition.z - zoom;
+                        } else if (intersect.object.name.includes('Back')) {
+                            targetPosition.z = posterPosition.z + step_left;
+                            posterPosition_tmp.z = posterPosition.z + step_left;
+                            targetPosition.x = posterPosition.x - zoom;
+                            
+                        } else {
+                            // raise error
+                            console.log("Error: No such poster found");
+                        }
+
+                        const lookDirection = camera.getWorldDirection(new THREE.Vector3()).normalize();
+                        const lookAtPoint = new THREE.Vector3().copy(camera.position).add(lookDirection);
+                        
+                        controls.enabled = false; // Disable controls during animation
+                        current_time = Date.now();
+                        animation_time = 500; // 1000ms for the animation duration
+                        new TWEEN.Tween(camera.position)
+                            .to(targetPosition, animation_time) // 1000ms for the animation duration
+                            .easing(TWEEN.Easing.Quadratic.InOut)
+                            .onUpdate(() => {
+                                
+                                t = (Date.now() - current_time) / animation_time;
+                                t = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // Ease in-out function
+                                const lookAtPosition = new THREE.Vector3().lerpVectors(lookAtPoint, posterPosition_tmp, t);
+                                camera.lookAt(lookAtPosition);
+                                
+                            })
+                            .onComplete(() => {
+                                controls.enabled = true; // Re-enable controls after animation
+                            })
+                            .start();
+                    }
+                }
+            }
+        }, undefined, function (error) {
+            console.error(error);
+        });
+
+        // Camera position
+        camera.position.z = 15;
+        camera.position.y = 0;
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            //controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
+            TWEEN.update(); // Update TWEEN animations
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', function () {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+
+
+
+</body>
 </html>
-
