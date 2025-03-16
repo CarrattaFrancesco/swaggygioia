@@ -74,7 +74,13 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
 	<script>
@@ -111,13 +117,15 @@
 		renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 		document.body.appendChild(renderer.domElement);
 		
-		// Cinematic tone mapping settings
-		renderer.toneMapping = THREE.ACESFilmicToneMapping;
-		renderer.toneMappingExposure = 1;
-		renderer.outputEncoding = THREE.sRGBEncoding;
-		renderer.physicallyCorrectLights = true;
 
-		// Load HDRI environment map
+		
+		// // Cinematic tone mapping settings
+		// renderer.toneMapping = THREE.ACESFilmicToneMapping;
+		// renderer.toneMappingExposure = 1;
+		// renderer.outputEncoding = THREE.sRGBEncoding;
+		// renderer.physicallyCorrectLights = true;
+
+		// // Load HDRI environment map
 		const pmremGenerator = new THREE.PMREMGenerator(renderer);
 		pmremGenerator.compileEquirectangularShader();
 
@@ -132,20 +140,41 @@
 				pmremGenerator.dispose();
 			});
 
-		var bgTexture = new THREE.TextureLoader().load('data/sfondo.png');
-		scene.background = bgTexture;
+		// var bgTexture = new THREE.TextureLoader().load('data/sfondo.png');
+		// scene.background = bgTexture;
+		
+
+		// Bloom effect setup
+		const renderScene = new THREE.RenderPass(scene, camera);
+
+		const bloomParams = {
+			strength: 1.5,
+			radius: 0.4,
+			threshold: 0.2
+		};
+
+		const bloomPass = new THREE.UnrealBloomPass(
+			new THREE.Vector2(window.innerWidth, window.innerHeight),
+			bloomParams.strength,
+			bloomParams.radius,
+			bloomParams.threshold
+		);
+
+		const composer = new THREE.EffectComposer(renderer);
+		composer.addPass(renderScene);
+		composer.addPass(bloomPass);
 
 		// Enable high-quality shadows in the renderer
 		renderer.shadowMap.enabled = true;
 		renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 		
-		// Add ambient light for better overall illumination
-		const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+		// ambient light
+		const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 		scene.add(ambientLight);
 
 		// Add this after your scene is created
-		const axesHelper = new THREE.AxesHelper(5); // The parameter is the length of the axes
-		scene.add(axesHelper);
+		// const axesHelper = new THREE.AxesHelper(5); // The parameter is the length of the axes
+		// scene.add(axesHelper);
 
         // OrbitControls
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -178,11 +207,17 @@
 
         loader.load('data/models/photoboot.glb', function (gltf) {
             gltf.scene.traverse(function (node) {
-                if (node.isMesh) {
-                    node.castShadow = true;
-                    node.receiveShadow = true;
-                    console.log("mesh added");
-                }
+				
+				// Add this to your mesh traversal where you want objects to glow
+				if (node.isMesh && !node.name.includes('Cubo004')) {
+					console.log(node.name);
+					console.log(node.material);
+					// Make material emissive for glow
+					node.material.emissive = null;  // Choose glow color
+					node.material.emissiveIntensity = 0;              // Adjust glow strength
+				}
+				
+
             });
             scene.add(gltf.scene);
             gltf.scene.position.set(0, -4, 0);
@@ -221,8 +256,6 @@
             }
 
             function handleClick(clientX, clientY) {
-
-
 
                 // Calculate mouse position in normalized device coordinates
                 mouse.x = (clientX / window.innerWidth) * 2 - 1;
@@ -393,7 +426,8 @@
         function animate() {
             requestAnimationFrame(animate);
             TWEEN.update(); // Update TWEEN animations
-            renderer.render(scene, camera);
+			// Use composer instead of renderer
+			composer.render();
         }
         animate();
 
@@ -402,7 +436,12 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+			composer.setSize(window.innerWidth, window.innerHeight);
+		});
+
+
+
+
     </script>
 </body>
 </html>
