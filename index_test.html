@@ -14,6 +14,8 @@
     </style>
 </head>
 <body>
+
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
@@ -73,7 +75,27 @@
         const bloomLayer = new THREE.Layers();
         bloomLayer.set(BLOOM_LAYER);
         const bloomScene = new THREE.Scene();
+        
+        // Create video element
+        const video = document.createElement('video');
+        video.src = 'data/video/video.mp4'; // Replace with your video path
+        video.loop = true;
+        video.muted = true; // Most browsers require muted for autoplay
+        video.playsInline = true; // Important for iOS
+        video.autoplay = true;
+        video.crossOrigin = "anonymous";
+        video.load();
 
+        // Create video texture from the video element
+        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+        videoTexture.format = THREE.RGBAFormat;
+
+        // rotate the video of 90 degree
+        videoTexture.rotation = - Math.PI / 2; // Rotate the texture by 90 degrees
+        videoTexture.center.set(0.5, 0.5); // Set the center of rotation to the middle of the texture
+        
 
         // Load GLTF model
         const loader = new THREE.GLTFLoader();
@@ -81,31 +103,56 @@
         loader.load('data/models/photoboot.glb', function (gltf) {
             scene.add(gltf.scene);
              // When loading models, set layers appropriately
+            // When loading models, set layers appropriately
             gltf.scene.traverse((child) => {
-                if (child.isMesh) {
-                    // Objects that should NOT bloom
-                    if (child.name !== 'Cubo004') {
-                        child.layers.set(NORMAL_LAYER);
+                    if (child.isMesh) {
+                        // Objects that should bloom
+                        if (child.name === 'Cubo004' || child.name === 'VIDEO') {
+                            child.layers.set(BLOOM_LAYER);
+                            // Clone this object to the bloom scene
+                            const clone = child.clone();
+                            bloomScene.add(clone);
+                            
+                            // Apply video texture to VIDEO object
+                            if (child.name === 'VIDEO') {
+                                // Create a new material with the video texture
+                                const videoMaterial = new THREE.MeshStandardMaterial({
+                                    map: videoTexture,
+                                    color: new THREE.Color(0x555555),
+                                    emissive: new THREE.Color(0xffffff),
+                                    emissiveMap: videoTexture,
+                                    emissiveIntensity: 1.0
+                                });
+
+                                // scale down the video texture
+                                videoMaterial.map.repeat.set(3, 3); // Adjust the repeat value as needed
+                                
+
+                                
+                                // Apply the material
+                                child.material = videoMaterial;
+                                clone.material = videoMaterial;
+                                
+                                // Start the video
+                                video.play();
+                            } else {
+                                // Make other objects glow
+                                child.material.emissive = new THREE.Color(0xffffff);
+                                child.material.emissiveIntensity = 1.0;
+                                child.material.emissiveMap = child.material.map;
+                            }
+                        } else {
+                            child.layers.set(NORMAL_LAYER);
+                        }
                     }
-                    // Objects that SHOULD bloom
-                    else {
-                        child.layers.set(BLOOM_LAYER);
-                        // Clone this object to the bloom scene
-                        const clone = child.clone();
-                        bloomScene.add(clone);
-                        // Make it glow
-                        child.material.emissive = new THREE.Color(0xffffff);
-                        child.material.emissiveIntensity = 1.0;
-                    }
-                }
-            });
+                });
 
 
         });
 
         // Bloom setup
         const bloomParams = {
-            strength: 2.0,
+            strength: 1.5,
             radius: 0.8,
             threshold: 0.3
         };
@@ -174,6 +221,10 @@
         function animate() {
             requestAnimationFrame(animate);
         
+              // Update video texture if video is playing
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                videoTexture.needsUpdate = true;
+            }
             
             controls.update();
             
