@@ -1,0 +1,50 @@
+{
+  "Paper_Left": {
+    "name": "Digital Art Gallery",
+    "description": "Interactive 3D gallery showcasing digital artwork with immersive experiences",
+    "category": "Digital Art",
+    "year": "2024",
+    "technologies": ["Three.js", "WebGL", "React"],
+    "status": "Completed"
+  },
+  "Paper002_left": {
+    "name": "Virtual Museum",
+    "description": "Virtual reality museum experience with historical artifacts and guided tours",
+    "category": "Cultural Heritage",
+    "year": "2024",
+    "technologies": ["VR", "Unity", "C#"],
+    "status": "In Progress"
+  },
+  "Paper_Right": {
+    "name": "E-Commerce Platform",
+    "description": "Modern e-commerce solution with AR product visualization",
+    "category": "Web Development",
+    "year": "2023",
+    "technologies": ["Vue.js", "Node.js", "AR.js"],
+    "status": "Completed"
+  },
+  "Paper002_Right": {
+    "name": "Educational VR App",
+    "description": "Virtual reality application for immersive learning experiences",
+    "category": "Education",
+    "year": "2024",
+    "technologies": ["VR", "WebXR", "JavaScript"],
+    "status": "Prototype"
+  },
+  "Paper_Front": {
+    "name": "Smart City Dashboard",
+    "description": "Real-time data visualization dashboard for smart city management",
+    "category": "Data Visualization",
+    "year": "2023",
+    "technologies": ["D3.js", "Python", "IoT"],
+    "status": "Completed"
+  },
+  "Paper002_Front": {
+    "name": "AI Art Generator",
+    "description": "Machine learning powered art generation tool with custom style transfer",
+    "category": "AI/ML",
+    "year": "2024",
+    "technologies": ["TensorFlow", "Python", "WebGL"],
+    "status": "In Progress"
+  }
+}

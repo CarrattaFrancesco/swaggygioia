@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js GLTF Loader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0);
+            display: none;
+            justify-content: flex-end;
+            align-items: center;
+        }
+        .card {
+            width: 100%;
+            height: 100px;
+            background: white;
+            border-radius: 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            margin: 50px;
+			left: 50%;
+			height: 50%;
+        }
+
+        .close-btn {
+            top: 10px;
+            right: 10px;
+            background: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .overlay {
+                justify-content: center;
+                align-items: flex-end;
+            }
+            .card {
+                width: 100%;
+                height: 50%; /* Adjust this value to change the height of the card on mobile */
+                margin: 0;
+                border-radius: 10px 10px 0 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay  ">
+
+
+		<div class="card mt-3">
+			<button class="close-btn" onclick="closeOverlay()">X</button>
+			<h2>Card Title</h2>
+			<p>Card content goes here...</p>
+		</div>
+
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+	<script>
+       
+    </script>
+	<script>
+
+		function closeOverlay() {
+			// Hide the overlay
+			document.querySelector('.overlay').style.display = 'none';
+			
+			// Restore all objects to their original appearance if darkening was applied
+			if (window.darkeningApplied) {
+				scene.traverse(function(node) {
+					if (node.isMesh && node.userData.originalMaterial) {
+						// Restore original material properties
+						node.material.color.copy(node.userData.originalMaterial.color);
+						if (node.material.emissive) {
+							node.material.emissive.copy(node.userData.originalMaterial.emissive);
+						}
+					}
+				});
+				
+				// Reset state variables
+				window.highlightedPaper = null;
+				window.darkeningApplied = false;
+			}
+		}
+		// Scene setup
+		const scene = new THREE.Scene();
+		const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+		const renderer = new THREE.WebGLRenderer({ antialias: true });
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+		document.body.appendChild(renderer.domElement);
+		
+
+		
+		// // Cinematic tone mapping settings
+		// renderer.toneMapping = THREE.ACESFilmicToneMapping;
+		// renderer.toneMappingExposure = 1;
+		// renderer.outputEncoding = THREE.sRGBEncoding;
+		// renderer.physicallyCorrectLights = true;
+
+		// // Load HDRI environment map
+		const pmremGenerator = new THREE.PMREMGenerator(renderer);
+		pmremGenerator.compileEquirectangularShader();
+
+		new THREE.RGBELoader()
+			.setPath('data/models/')
+			.load('hdr.hdr', function (texture) {
+				texture.mapping = THREE.EquirectangularReflectionMapping;
+				const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+				scene.environment = envMap;
+				// grey background
+				texture.dispose();
+				pmremGenerator.dispose();
+			});
+
+		// var bgTexture = new THREE.TextureLoader().load('data/sfondo.png');
+		// scene.background = bgTexture;
+		
+
+		// Bloom effect setup
+		const renderScene = new THREE.RenderPass(scene, camera);
+
+		const bloomParams = {
+			strength: 1.5,
+			radius: 0.4,
+			threshold: 0.2
+		};
+
+		const bloomPass = new THREE.UnrealBloomPass(
+			new THREE.Vector2(window.innerWidth, window.innerHeight),
+			bloomParams.strength,
+			bloomParams.radius,
+			bloomParams.threshold
+		);
+
+		const composer = new THREE.EffectComposer(renderer);
+		composer.addPass(renderScene);
+		composer.addPass(bloomPass);
+
+		// Enable high-quality shadows in the renderer
+		renderer.shadowMap.enabled = true;
+		renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+		
+		// ambient light
+		const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+		scene.add(ambientLight);
+
+		// Add this after your scene is created
+		// const axesHelper = new THREE.AxesHelper(5); // The parameter is the length of the axes
+		// scene.add(axesHelper);
+
+        // OrbitControls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+        controls.dampingFactor = 0.25;
+        controls.screenSpacePanning = false;
+        controls.maxPolarAngle = Math.PI / 2;
+
+        const onKeyDown = function (event) {
+            switch (event.code) {
+                case 'Enter':
+                    const lookDirection = camera.getWorldDirection(new THREE.Vector3()).normalize();
+                    const lookAtPoint = new THREE.Vector3().copy(camera.position).add(lookDirection);
+                    console.log("look at", lookAtPoint);
+                    camera.lookAt(lookAtPoint);
+                    break;
+            }
+        };
+
+        document.addEventListener('keydown', onKeyDown, false);
+
+        // Raycaster for detecting clicks
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Load GLTF model
+        const loader = new THREE.GLTFLoader();
+		// create a dictionary to store the textures
+		const textures = {};
+
+        loader.load('data/models/photoboot.glb', function (gltf) {
+            gltf.scene.traverse(function (node) {
+				
+				// Add this to your mesh traversal where you want objects to glow
+				if (node.isMesh && !node.name.includes('Cubo004')) {
+					console.log(node.name);
+					console.log(node.material);
+					// Make material emissive for glow
+					node.material.emissive = null;  // Choose glow color
+					node.material.emissiveIntensity = 0;              // Adjust glow strength
+				}
+				
+
+            });
+            scene.add(gltf.scene);
+            gltf.scene.position.set(0, -4, 0);
+            gltf.scene.scale.set(1, 1, 1);
+
+			// for all the objects in the scene, store the textures_index by default is 1
+			gltf.scene.traverse(function (child) {
+				if (child.isMesh) {
+					textures[child.name] = 1;
+				}
+			});
+
+			console.log(textures);
+
+            // Add event listener for clicks and touch events
+            window.addEventListener('click', onMouseClick, false);
+            window.addEventListener('touchstart', onTouchStart, false);
+
+            function onMouseClick(event) {
+                handleClick(event.clientX, event.clientY);
+            }
+
+            function onTouchStart(event) {
+                if (event.touches.length > 0) {
+                    handleClick(event.touches[0].clientX, event.touches[0].clientY);
+                }
+            }
+
+            function calculateResponsiveValues() {
+                const aspectRatio = window.innerWidth / window.innerHeight;
+                let step_left = aspectRatio < 1 ? 0 : 1.5 * Math.min(1, aspectRatio - 1);
+                let zoom = window.innerWidth < 768 ? 3 : 2;
+                let step_up = window.innerWidth < 768 ? -5.5 : -4;
+                console.log("step_left", step_left, "zoom", zoom, "aspectRatio", aspectRatio);
+                return { step_left, zoom, step_up };
+            }
+
+            function handleClick(clientX, clientY) {
+
+                // Calculate mouse position in normalized device coordinates
+                mouse.x = (clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+
+                // Update the raycaster with the camera and mouse position
+                raycaster.setFromCamera(mouse, camera);
+
+                // Calculate objects intersecting the ray
+                const intersects = raycaster.intersectObjects(gltf.scene.children, true);
+
+
+				for (let i = 0; i < 1; i++) {
+					const intersect = intersects[i];
+					// check if the intersection is undefined
+					if (intersect === undefined) {
+						return;
+					}
+
+					console.log(intersect.object.name);
+					return;
+					if (intersect.object.name.includes('Paper')) {
+						// Store the clicked paper object
+						const clickedPaper = intersect.object;
+						
+						// Check if this is a different paper than the one currently highlighted
+						if (!window.highlightedPaper || window.highlightedPaper !== clickedPaper) {
+							// First, restore all objects to original state if they were modified
+							if (window.darkeningApplied) {
+								gltf.scene.traverse(function(node) {
+									if (node.isMesh && node.userData.originalMaterial) {
+										// Restore original material properties
+										node.material.color.copy(node.userData.originalMaterial.color);
+										if (node.material.emissive) {
+											node.material.emissive.copy(node.userData.originalMaterial.emissive);
+										}
+									}
+								});
+							}
+							
+							// Darken everything except the clicked paper
+							gltf.scene.traverse(function(node) {
+								if (node.isMesh && node !== clickedPaper) {
+									// Store original material properties if not already stored
+									if (!node.userData.originalMaterial) {
+										node.userData.originalMaterial = {
+											color: node.material.color.clone(),
+											emissive: node.material.emissive ? node.material.emissive.clone() : new THREE.Color(0x000000)
+										};
+									}
+									// Darken the object
+									node.material.color.multiplyScalar(0.5);
+								}
+							});
+							
+							// Make clicked paper slightly brighter
+							if (!clickedPaper.userData.originalMaterial) {
+								clickedPaper.userData.originalMaterial = {
+									color: clickedPaper.material.color.clone(),
+									emissive: clickedPaper.material.emissive ? clickedPaper.material.emissive.clone() : new THREE.Color(0x000000)
+								};
+							}
+							clickedPaper.material.emissive.set(0x222222);
+							
+							// Update highlighted paper and darkening flag
+							window.highlightedPaper = clickedPaper;
+							window.darkeningApplied = true;
+						}
+
+						// Animate the overlay appearance
+						const overlay = document.querySelector('.overlay');
+						
+						if (overlay.style.display !== 'flex') {
+							overlay.style.opacity = 0;
+							overlay.style.display = 'flex';
+							new TWEEN.Tween(overlay.style)
+							.to({ opacity: 1 }, 500) // 500ms for the animation duration
+							.easing(TWEEN.Easing.Quadratic.InOut)
+							.start();
+						}
+					   
+						// Move the camera in front of the poster with animation
+						const posterPosition = intersect.object.position;
+						const { step_left, zoom, step_up } = calculateResponsiveValues();
+						let targetPosition = {
+							x: posterPosition.x,
+							y: posterPosition.y + step_up,
+							z: posterPosition.z
+						};
+						let posterPosition_tmp = {
+							x: posterPosition.x,
+							y: posterPosition.y + step_up,
+							z: posterPosition.z
+						};
+
+						if (intersect.object.name.includes('Front')) {
+							step_z = 5;
+						} else if (intersect.object.name.includes('Left')) {
+							targetPosition.x = posterPosition.x + step_left;
+							posterPosition_tmp.x = posterPosition.x + step_left;
+							targetPosition.z = posterPosition.z + zoom;
+						} else if (intersect.object.name.includes('Right')) {
+							targetPosition.x = posterPosition.x - step_left;
+							posterPosition_tmp.x = posterPosition.x - step_left;
+							targetPosition.z = posterPosition.z - zoom;
+						} else if (intersect.object.name.includes('Back')) {
+							targetPosition.z = posterPosition.z + step_left;
+							posterPosition_tmp.z = posterPosition.z + step_left;
+							targetPosition.x = posterPosition.x - zoom;
+						} else {
+							console.log("Error: No such poster found");
+						}
+
+						const lookDirection = camera.getWorldDirection(new THREE.Vector3()).normalize();
+						const lookAtPoint = new THREE.Vector3().copy(camera.position).add(lookDirection);
+
+						controls.enabled = false; // Disable controls during animation
+						current_time = Date.now();
+						animation_time = 500; // 500ms for the animation duration
+						new TWEEN.Tween(camera.position)
+							.to(targetPosition, animation_time)
+							.easing(TWEEN.Easing.Quadratic.InOut)
+							.onUpdate(() => {
+								t = (Date.now() - current_time) / animation_time;
+								t = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // Ease in-out function
+								const lookAtPosition = new THREE.Vector3().lerpVectors(lookAtPoint, posterPosition_tmp, t);
+								camera.lookAt(lookAtPosition);
+							})
+							.onComplete(() => {
+								controls.enabled = true; // Re-enable controls after animation
+							})
+							.start();
+
+						// Change the image displayed on the mesh
+						const textureLoader = new THREE.TextureLoader();
+						let imageIndex = textures[intersect.object.name];
+						let newTexture;
+						let imageName;
+
+						function loadNextImage() {
+							imageName = `img_${imageIndex}.jpg`;
+							newTexture = textureLoader.load(`data/IMG/${intersect.object.name}/${imageName}`, function (texture) {
+								intersect.object.material.map = texture;
+								intersect.object.material.needsUpdate = true;
+								textures[intersect.object.name] = imageIndex + 1;
+								console.log('Image file name:', imageName);
+							}, undefined, function () {
+								console.error('Image not found:', imageName);
+								// If the image is not found, restart from img_1
+								imageIndex = 1;
+								loadNextImage();
+							});
+						}
+
+						loadNextImage();
+					}
+				}
+            }
+        }, undefined, function (error) {
+            console.error(error);
+        });
+
+        // Camera position
+        camera.position.z = 15;
+        camera.position.y = 0;
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update(); // Update TWEEN animations
+			// Use composer instead of renderer
+			composer.render();
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', function () {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+			composer.setSize(window.innerWidth, window.innerHeight);
+		});
+
+
+
+
+    </script>
+</body>
+</html>

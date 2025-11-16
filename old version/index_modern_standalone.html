@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Interactive 3D Photo Booth with selective bloom effects">
+    <title>Photo Booth - Modern (No Build)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background-color: #000;
+            user-select: none;
+        }
+        
+        canvas {
+            display: block;
+            outline: none;
+        }
+        
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #000 0%, #222 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+        }
+        
+        .loading-container {
+            text-align: center;
+            color: white;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #333;
+            border-top: 4px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 20px;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+        
+        .progress-bar {
+            width: 350px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 0 auto 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00ccff);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 3px;
+        }
+        
+        .progress-text {
+            font-size: 14px;
+            opacity: 0.8;
+            font-weight: 300;
+        }
+        
+        .loading-status {
+            font-size: 12px;
+            opacity: 0.6;
+            margin-top: 10px;
+            height: 20px;
+        }
+        
+        #fps-display {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        #controls-panel {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 13px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 200px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #ccc;
+        }
+        
+        .control-group input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            padding: 6px 8px;
+            color: white;
+            font-size: 12px;
+        }
+        
+        .control-group input:focus {
+            outline: none;
+            border-color: #00ff88;
+            box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.2);
+        }
+        
+        .control-value {
+            float: right;
+            color: #00ff88;
+            font-weight: 500;
+        }
+        
+        #play-button {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            z-index: 100;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+        }
+        
+        #play-button:hover {
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
+        }
+        
+        .error-display {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 50, 50, 0.95);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            z-index: 1001;
+            max-width: 450px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .error-display h3 {
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .error-display p {
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .error-display button {
+            background: white;
+            color: #333;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .error-display button:hover {
+            background: #f0f0f0;
+            transform: translateY(-1px);
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            body {
+                touch-action: none;
+            }
+            
+            #controls-panel {
+                right: 10px;
+                top: 10px;
+                padding: 12px;
+                font-size: 12px;
+                min-width: 180px;
+            }
+            
+            #fps-display {
+                top: 10px;
+                left: 10px;
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            
+            .loading-container {
+                padding: 20px;
+            }
+            
+            .progress-bar {
+                width: 280px;
+            }
+        }
+        
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+        
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading Photo Booth...</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="progress-text" id="progress-text">0%</div>
+            <div class="loading-status" id="loading-status">Initializing...</div>
+        </div>
+    </div>
+
+    <!-- FPS Display -->
+    <div id="fps-display" style="display: none;">FPS: --</div>
+
+    <!-- Controls Panel -->
+    <div id="controls-panel" style="display: none;">
+        <div class="control-group">
+            <label>Bloom Strength <span class="control-value" id="strength-value">1.5</span></label>
+            <input type="range" id="bloom-strength" min="0" max="3" step="0.1" value="1.5">
+        </div>
+        <div class="control-group">
+            <label>Bloom Radius <span class="control-value" id="radius-value">0.8</span></label>
+            <input type="range" id="bloom-radius" min="0" max="2" step="0.1" value="0.8">
+        </div>
+        <div class="control-group">
+            <label>Bloom Threshold <span class="control-value" id="threshold-value">0.1</span></label>
+            <input type="range" id="bloom-threshold" min="0" max="1" step="0.05" value="0.1">
+        </div>
+    </div>
+
+    <!-- Accessibility -->
+    <main role="main" aria-label="3D Photo Booth Scene">
+        <div class="visually-hidden">
+            <h1>Interactive 3D Photo Booth</h1>
+            <p>Navigate with mouse or touch to explore the 3D scene. Use the controls panel to adjust bloom effects.</p>
+        </div>
+    </main>
+    
+    <noscript>
+        <div class="error-display">
+            <h2>JavaScript Required</h2>
+            <p>This 3D photo booth requires JavaScript to function. Please enable JavaScript in your browser.</p>
+        </div>
+    </noscript>
+
+    <!-- Three.js via reliable CDN - Correct loading order -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Shaders must load before post-processing -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <!-- Post-processing in dependency order -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+    <script>
+
+        // Set up render layers
+        const BLOOM_LAYER = 1;
+        const NORMAL_LAYER = 0;
+
+        class ModernPhotoBoothApp {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.controls = null;
+                this.bloomComposer = null;
+                this.finalComposer = null;
+                this.bloomPass = null;
+                
+                this.bloomScene = new THREE.Scene();
+                this.BLOOM_LAYER = 1;
+                this.NORMAL_LAYER = 0;
+                
+                this.loadingProgress = { loaded: 0, total: 0 };
+                this.isInitialized = false;
+                this.animationId = null;
+                
+                // Auto-rotation properties
+                this.mainModel = null;
+                this.isAutoRotating = false;
+                this.autoRotationSpeed = 0.005;
+                this.userHasInteracted = false;
+                
+                this.config = {
+                    bloom: { strength: 1.5, radius: 0.8, threshold: 0.1 },
+                    camera: { fov: 75, near: 0.1, far: 1000, position: { x: 0, y: 1, z: 20 } }
+                };
+                
+                // Wait for Three.js to load then initialize
+                this.waitForThreeJS();
+            }
+
+            waitForThreeJS() {
+                // Check if all required Three.js components are loaded
+                if (typeof THREE !== 'undefined' && 
+                    THREE.OrbitControls && 
+                    THREE.GLTFLoader && 
+                    THREE.RGBELoader && 
+                    THREE.EffectComposer && 
+                    THREE.RenderPass && 
+                    THREE.UnrealBloomPass && 
+                    THREE.ShaderPass) {
+                    this.init();
+                } else {
+                    // Log what's missing for debugging
+                    if (typeof THREE === 'undefined') {
+                        console.log('Waiting for THREE.js core...');
+                    } else {
+                        const missing = [];
+                        if (!THREE.OrbitControls) missing.push('OrbitControls');
+                        if (!THREE.GLTFLoader) missing.push('GLTFLoader');
+                        if (!THREE.RGBELoader) missing.push('RGBELoader');
+                        if (!THREE.EffectComposer) missing.push('EffectComposer');
+                        if (!THREE.RenderPass) missing.push('RenderPass');
+                        if (!THREE.UnrealBloomPass) missing.push('UnrealBloomPass');
+                        if (!THREE.ShaderPass) missing.push('ShaderPass');
+                        if (missing.length > 0) {
+                            console.log('Waiting for:', missing.join(', '));
+                        }
+                    }
+                    setTimeout(() => this.waitForThreeJS(), 200);
+                }
+            }
+
+            async init() {
+                try {
+                    this.updateLoadingStatus('Checking WebGL support...');
+                    
+                    if (!this.checkWebGLSupport()) {
+                        throw new Error('WebGL is not supported in this browser');
+                    }
+                    
+                    this.setupRenderer();
+                    this.setupScene();
+                    this.setupCamera();
+                    this.setupControls();
+                    this.setupBloomPipeline();
+                    this.setupEventListeners();
+                    
+                    await this.loadAssets();
+                    
+                    this.hideLoadingScreen();
+                    this.showUI();
+                    this.startRenderLoop();
+                    
+                } catch (error) {
+                    this.handleError(error);
+                }
+            }
+
+            checkWebGLSupport() {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                return gl instanceof WebGLRenderingContext;
+            }
+
+            setupRenderer() {
+                this.renderer = new THREE.WebGLRenderer({ 
+                    antialias: true,
+                    powerPreference: 'high-performance'
+                });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                // Use r128 compatible settings
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.toneMappingExposure = 1;
+                
+                document.body.appendChild(this.renderer.domElement);
+            }
+
+            setupScene() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x000000);
+                
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                this.scene.add(ambientLight);
+            }
+
+            setupCamera() {
+                const { fov, near, far, position } = this.config.camera;
+                this.camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, near, far);
+                this.camera.position.set(position.x, position.y, position.z);
+                this.camera.layers.enableAll();
+            }
+
+            setupControls() {
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.screenSpacePanning = false;
+                this.controls.maxPolarAngle = Math.PI / 2;
+            }
+
+            setupBloomPipeline() {
+                // Modify the rendering approach (matching index_test.html)
+                const renderScene = new THREE.RenderPass(this.scene, this.camera);
+
+                // Setup the bloom renderer
+                this.bloomPass = new THREE.UnrealBloomPass(
+                    new THREE.Vector2(window.innerWidth, window.innerHeight),
+                    this.config.bloom.strength,
+                    this.config.bloom.radius,
+                    this.config.bloom.threshold
+                );
+
+                // Create a shader pass to blend the two scenes
+                const finalPass = new THREE.ShaderPass(
+                    new THREE.ShaderMaterial({
+                        uniforms: {
+                            baseTexture: { value: null },
+                            bloomTexture: { value: null }
+                        },
+                        vertexShader: `
+                            varying vec2 vUv;
+                            void main() {
+                                vUv = uv;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
+                        fragmentShader: `
+                            uniform sampler2D baseTexture;
+                            uniform sampler2D bloomTexture;
+                            varying vec2 vUv;
+                            void main() {
+                                vec4 baseColor = texture2D(baseTexture, vUv);
+                                vec4 bloomColor = texture2D(bloomTexture, vUv);
+                                
+                                // Only add bloom where the base texture isn't solid
+                                // This prevents bloom from showing through objects
+                                float baseAlpha = baseColor.a;
+                                gl_FragColor = baseColor + vec4(bloomColor.rgb * (1.0-baseAlpha), 0.0);
+                            }
+                        `,
+                        defines: {}
+                    }), "baseTexture"
+                );
+                finalPass.needsSwap = true;
+
+                // Setup render targets
+                const renderTarget = new THREE.WebGLRenderTarget(
+                    window.innerWidth, window.innerHeight
+                );
+                this.bloomComposer = new THREE.EffectComposer(this.renderer, renderTarget);
+                this.bloomComposer.renderToScreen = false;
+                this.bloomComposer.addPass(new THREE.RenderPass(this.bloomScene, this.camera));
+                this.bloomComposer.addPass(this.bloomPass);
+
+                this.finalComposer = new THREE.EffectComposer(this.renderer);
+                this.finalComposer.addPass(renderScene);
+                this.finalComposer.addPass(finalPass);
+
+                // Set the uniforms to blend the scenes
+                finalPass.uniforms["bloomTexture"].value = this.bloomComposer.renderTarget2.texture;
+            }
+
+            
+
+            async loadAssets() {
+                this.updateLoadingStatus('Loading environment...');
+                this.updateLoadingProgress(10);
+                
+                // Load HDRI
+                try {
+                    const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+                    pmremGenerator.compileEquirectangularShader();
+
+                    const rgbeLoader = new THREE.RGBELoader();
+                    const texture = await new Promise((resolve, reject) => {
+                        rgbeLoader.load('data/models/hdr.hdr', resolve, undefined, reject);
+                    });
+                    
+                    texture.mapping = THREE.EquirectangularReflectionMapping;
+                    const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                    this.scene.environment = envMap;
+                    texture.dispose();
+                    pmremGenerator.dispose();
+                    this.updateLoadingProgress(40);
+                } catch (error) {
+                    console.warn('HDRI loading failed, using fallback lighting:', error);
+                }
+
+                this.updateLoadingStatus('Loading 3D model...');
+                
+                // Load GLTF model
+                const gltfLoader = new THREE.GLTFLoader();
+                try {
+                    const gltf = await new Promise((resolve, reject) => {
+                        gltfLoader.load('data/models/photoboot.glb', resolve, undefined, reject);
+                    });
+                    this.scene.add(gltf.scene);
+                    
+                    // Store reference to main model for auto-rotation
+                    this.mainModel = gltf.scene;
+                    
+                    this.processModelMeshes(gltf.scene);
+                    this.updateLoadingProgress(70);
+                } catch (error) {
+                    throw new Error(`Failed to load model: ${error.message}`);
+                }
+
+                this.updateLoadingStatus('Setting up video texture...');
+                this.setupVideoTexture();
+                this.updateLoadingProgress(100);
+                
+                this.updateLoadingStatus('Ready!');
+                this.isInitialized = true;
+                
+                // Start auto-rotation
+                this.startAutoRotation();
+            }
+ 
+
+            processModelMeshes(model) {
+                console.log('Processing model meshes...');
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        console.log('Found mesh:', child.name, 'Material:', child.material);
+                        
+                        /// Objects that should bloom
+                        if (child.name === 'Cubo004' || child.name === 'VIDEO') {
+                            child.layers.set(BLOOM_LAYER);
+                            // Clone this object to the bloom scene
+                            const clone = child.clone();
+                            this.bloomScene.add(clone);
+                            
+                            // Apply video texture to VIDEO object
+                            if (child.name === 'VIDEO') {
+
+                            } else {
+                                // Make other objects glow
+                                child.material.emissive = new THREE.Color(0xffffff);
+                                child.material.emissiveIntensity = 1.0;
+                                child.material.emissiveMap = child.material.map;
+                            }
+                        } else {
+                            child.layers.set(NORMAL_LAYER);
+                        }
+                    }
+                });
+                
+                console.log('Bloom scene objects:', this.bloomScene.children.length);
+                this.bloomScene.children.forEach((child, index) => {
+                    console.log(`Bloom scene child ${index}:`, child.name, child.material?.emissive);
+                });
+            }
+
+            setupVideoTexture() {
+                const video = document.createElement('video');
+                video.src = 'data/video/video.mp4';
+                video.loop = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.autoplay = true;
+                video.crossOrigin = "anonymous";
+
+                const videoTexture = new THREE.VideoTexture(video);
+                videoTexture.minFilter = THREE.LinearFilter;
+                videoTexture.magFilter = THREE.LinearFilter;
+                videoTexture.format = THREE.RGBAFormat;
+                videoTexture.rotation = -Math.PI / 2;
+                videoTexture.center.set(0.5, 0.5);
+
+                video.addEventListener('loadeddata', () => {
+                    this.applyVideoToMeshes(videoTexture);
+                    video.play().catch(() => {
+                        this.showPlayButton();
+                    });
+                });
+
+                video.load();
+            }
+
+            applyVideoToMeshes(videoTexture) {
+                this.scene.traverse((child) => {
+                    if (child.userData.isVideoMesh && child.isMesh) {
+                        const videoMaterial = new THREE.MeshStandardMaterial({
+                            map: videoTexture,
+                            color: new THREE.Color(0x555555),
+                            emissive: new THREE.Color(0xffffff),
+                            emissiveMap: videoTexture,
+                            emissiveIntensity: 1.0
+                        });
+
+                        videoMaterial.map.repeat.set(3, 3);
+                        child.material = videoMaterial;
+
+                        if (child.userData.bloomClone) {
+                            child.userData.bloomClone.material = videoMaterial;
+                        }
+                    }
+                });
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', () => this.onWindowResize());
+                
+                // Auto-rotation interaction detection
+                this.setupInteractionDetection();
+                
+                // Bloom controls
+                const strengthSlider = document.getElementById('bloom-strength');
+                const radiusSlider = document.getElementById('bloom-radius');
+                const thresholdSlider = document.getElementById('bloom-threshold');
+                
+                strengthSlider.addEventListener('input', (e) => {
+                    this.config.bloom.strength = parseFloat(e.target.value);
+                    this.bloomPass.strength = this.config.bloom.strength;
+                    document.getElementById('strength-value').textContent = e.target.value;
+                    console.log('Bloom strength changed to:', e.target.value);
+                });
+                
+                radiusSlider.addEventListener('input', (e) => {
+                    this.config.bloom.radius = parseFloat(e.target.value);
+                    this.bloomPass.radius = this.config.bloom.radius;
+                    document.getElementById('radius-value').textContent = e.target.value;
+                    console.log('Bloom radius changed to:', e.target.value);
+                });
+                
+                thresholdSlider.addEventListener('input', (e) => {
+                    this.config.bloom.threshold = parseFloat(e.target.value);
+                    this.bloomPass.threshold = this.config.bloom.threshold;
+                    document.getElementById('threshold-value').textContent = e.target.value;
+                    console.log('Bloom threshold changed to:', e.target.value);
+                });
+
+                // Performance monitoring
+                this.setupPerformanceMonitoring();
+            }
+
+            setupPerformanceMonitoring() {
+                let frameCount = 0;
+                let lastTime = performance.now();
+
+                this.performanceMonitor = () => {
+                    frameCount++;
+                    const currentTime = performance.now();
+                    
+                    if (currentTime - lastTime >= 1000) {
+                        const fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+                        this.updateFPSDisplay(fps);
+                        frameCount = 0;
+                        lastTime = currentTime;
+                    }
+                };
+            }
+
+            startRenderLoop() {
+                const animate = () => {
+                    this.animationId = requestAnimationFrame(animate);
+                    this.render();
+                    if (this.performanceMonitor) this.performanceMonitor();
+                };
+                animate();
+            }
+
+            render() {
+                this.controls.update();
+                
+                // Handle auto-rotation
+                if (this.isAutoRotating && this.mainModel && !this.userHasInteracted) {
+                    this.mainModel.rotation.y += this.autoRotationSpeed;
+                }
+                
+                if (this.isInitialized) {
+                    // Update video texture
+                    this.scene.traverse((child) => {
+                        if (child.userData.isVideoMesh && child.material && child.material.map) {
+                            child.material.map.needsUpdate = true;
+                        }
+                    });
+                    
+                    // Render bloom (matching index_test.html exactly)
+                    this.renderer.autoClear = true;
+                    this.bloomComposer.render();
+                    
+                    // Debug: log bloom pass settings occasionally
+                    if (Math.random() < 0.01) { // 1% of frames
+                        console.log('Bloom settings:', {
+                            strength: this.bloomPass.strength,
+                            radius: this.bloomPass.radius,
+                            threshold: this.bloomPass.threshold,
+                            bloomSceneChildren: this.bloomScene.children.length
+                        });
+                    }
+                    
+                    // Clear only depth before final render (keeps bloom pixels but respects object occlusion)
+                    this.renderer.autoClear = false;
+                    this.renderer.clearDepth();
+                    
+                    // Render final scene with bloom texture applied
+                    this.finalComposer.render();
+                } else {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            }
+
+            onWindowResize() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+
+                this.camera.aspect = width / height;
+                this.camera.updateProjectionMatrix();
+                
+                this.renderer.setSize(width, height);
+                
+                if (this.bloomComposer) {
+                    this.bloomPass.resolution.set(width, height);
+                    this.bloomComposer.setSize(width, height);
+                    this.finalComposer.setSize(width, height);
+                }
+            }
+
+            updateLoadingProgress(percentage) {
+                const progressFill = document.getElementById('progress-fill');
+                const progressText = document.getElementById('progress-text');
+                
+                if (progressFill && progressText) {
+                    progressFill.style.width = `${percentage}%`;
+                    progressText.textContent = `${percentage}%`;
+                }
+            }
+
+            updateLoadingStatus(status) {
+                const statusElement = document.getElementById('loading-status');
+                if (statusElement) {
+                    statusElement.textContent = status;
+                }
+            }
+
+            hideLoadingScreen() {
+                const loadingScreen = document.getElementById('loading-screen');
+                if (loadingScreen) {
+                    loadingScreen.style.opacity = '0';
+                    loadingScreen.style.transition = 'opacity 0.8s ease';
+                    setTimeout(() => {
+                        loadingScreen.remove();
+                    }, 800);
+                }
+            }
+
+            showUI() {
+                document.getElementById('fps-display').style.display = 'block';
+                document.getElementById('controls-panel').style.display = 'block';
+            }
+
+            showPlayButton() {
+                const playButton = document.createElement('button');
+                playButton.id = 'play-button';
+                playButton.innerHTML = '▶ Play Video';
+                
+                playButton.addEventListener('click', () => {
+                    const videos = document.querySelectorAll('video');
+                    videos.forEach(video => video.play());
+                    playButton.remove();
+                });
+                
+                document.body.appendChild(playButton);
+            }
+
+            updateFPSDisplay(fps) {
+                const fpsDisplay = document.getElementById('fps-display');
+                if (fpsDisplay) {
+                    fpsDisplay.textContent = `FPS: ${fps}`;
+                    fpsDisplay.style.color = fps < 30 ? '#ff4444' : fps < 50 ? '#ffaa44' : '#44ff44';
+                }
+            }
+
+            startAutoRotation() {
+                if (this.mainModel) {
+                    this.isAutoRotating = true;
+                    console.log('Auto-rotation started');
+                }
+            }
+
+            stopAutoRotation() {
+                if (this.isAutoRotating) {
+                    this.isAutoRotating = false;
+                    this.userHasInteracted = true;
+                    console.log('Auto-rotation stopped - user interaction detected');
+                }
+            }
+
+            setupInteractionDetection() {
+                const canvas = this.renderer.domElement;
+                
+                // Mouse events
+                canvas.addEventListener('mousedown', () => this.stopAutoRotation());
+                canvas.addEventListener('wheel', () => this.stopAutoRotation());
+                
+                // Touch events for mobile
+                canvas.addEventListener('touchstart', () => this.stopAutoRotation());
+                
+                // Keyboard events
+                window.addEventListener('keydown', () => this.stopAutoRotation());
+                
+                // Controls events (when user starts manipulating camera)
+                if (this.controls) {
+                    this.controls.addEventListener('start', () => this.stopAutoRotation());
+                }
+            }
+
+            handleError(error) {
+                console.error('Application error:', error);
+                
+                const errorDisplay = document.createElement('div');
+                errorDisplay.className = 'error-display';
+                errorDisplay.innerHTML = `
+                    <h3>Error Loading 3D Scene</h3>
+                    <p>${error.message || 'Something went wrong loading the photo booth.'}</p>
+                    <button onclick="location.reload()">Reload Page</button>
+                `;
+                
+                document.body.appendChild(errorDisplay);
+                
+                // Hide loading screen
+                const loadingScreen = document.getElementById('loading-screen');
+                if (loadingScreen) {
+                    loadingScreen.style.display = 'none';
+                }
+            }
+        }
+
+        // Initialize the application
+        new ModernPhotoBoothApp();
+    </script>
+</body>
+</html>
