@@ -1,0 +1,1829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photobooth 3D Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #1a1a1a;
+            font-family: Arial, sans-serif;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            cursor: grab;
+        }
+        
+        #container:active {
+            cursor: grabbing;
+        }
+        
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            z-index: 200;
+        }
+        
+        #objectMenu {
+            position: fixed;
+            right: 10px;
+            top: 10px;
+            width: 280px;
+            max-height: 80vh;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            overflow-y: auto;
+            z-index: 300;
+            border: 1px solid #444;
+        }
+        
+        #objectMenu h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #00ff00;
+            font-size: 16px;
+            text-align: center;
+        }
+        
+        .object-item {
+            margin-bottom: 12px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            border-left: 3px solid #666;
+        }
+        
+        .object-name {
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+        
+        .object-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .toggle-button {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        
+        .visibility-btn {
+            background: #28a745;
+            color: white;
+        }
+        
+        .visibility-btn.hidden {
+            background: #dc3545;
+        }
+        
+        .material-btn {
+            background: #007bff;
+            color: white;
+        }
+        
+        .material-btn.disabled {
+            background: #6c757d;
+        }
+        
+        .toggle-button:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+        
+        .object-info {
+            font-size: 10px;
+            color: #ccc;
+            margin-top: 3px;
+        }
+        
+        #menuToggle {
+            position: fixed;
+            right: 300px;
+            top: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 400;
+            font-size: 12px;
+        }
+        
+        .bloom-controls {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #555;
+        }
+        
+        .bloom-controls h4 {
+            margin: 0 0 10px 0;
+            color: #ff88cc;
+            font-size: 13px;
+            text-align: center;
+        }
+        
+        .bloom-control-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .bloom-control-label {
+            color: #ccc;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .bloom-control-input {
+            width: 60px;
+            padding: 2px 4px;
+            border: 1px solid #666;
+            border-radius: 3px;
+            background: #333;
+            color: white;
+            font-size: 10px;
+            text-align: center;
+        }
+        
+        .bloom-control-value {
+            color: #88ccff;
+            font-size: 10px;
+            min-width: 40px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="info">
+        <h3>Photobooth 3D Test</h3>
+        <p>Mouse: orbit & zoom | Click: focus object | Double-click: reset view</p>
+        <div id="status">Loading model...</div>
+        <div id="objectProperties" style="margin-top: 10px; font-size: 11px; line-height: 1.3; display: none;">
+            <div style="color: #00ff88; font-weight: bold; margin-bottom: 5px;">Material Properties:</div>
+            <div id="propName" style="color: #ffffff; font-weight: bold;"></div>
+            <div id="propBaseColor" style="color: #ffcc00;"></div>
+            <div id="propNormalMap" style="color: #88ccff;"></div>
+            <div id="propORM" style="color: #ff88cc;"></div>
+            <div id="propRoughness" style="color: #ccffaa;"></div>
+            <div id="propMetalness" style="color: #ffaa88;"></div>
+            <div id="propEmissive" style="color: #aa88ff;"></div>
+        </div>
+    </div>
+    <div id="loading">Loading Photobooth Model...</div>
+    
+    <!-- Object Control Menu -->
+    <button id="menuToggle">Toggle Menu</button>
+    <div id="objectMenu">
+        <h3>Object Controls</h3>
+        
+        <!-- Bloom Controls -->
+        <div class="bloom-controls">
+            <h4>Bloom Parameters</h4>
+            <div class="bloom-control-item">
+                <span class="bloom-control-label">Strength:</span>
+                <input type="range" id="bloomStrengthSlider" class="bloom-control-input" min="0.1" max="10" step="0.1" value="2.5">
+                <span id="bloomStrengthValue" class="bloom-control-value">2.5</span>
+            </div>
+            <div class="bloom-control-item">
+                <span class="bloom-control-label">Radius:</span>
+                <input type="range" id="bloomRadiusSlider" class="bloom-control-input" min="0.1" max="3" step="0.1" value="1.0">
+                <span id="bloomRadiusValue" class="bloom-control-value">1.0</span>
+            </div>
+            <div class="bloom-control-item">
+                <span class="bloom-control-label">Threshold:</span>
+                <input type="range" id="bloomThresholdSlider" class="bloom-control-input" min="0" max="1" step="0.05" value="0.6">
+                <span id="bloomThresholdValue" class="bloom-control-value">0.60</span>
+            </div>
+        </div>
+        
+        <div id="objectList">
+            <!-- Objects will be populated here -->
+        </div>
+    </div>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+
+    <script>
+        // Scene setup
+        let scene, camera, renderer, controls;
+        let photoboothModel;
+        let bloomScene; // Scene for bloom objects
+        let bloomComposer, finalComposer; // Post-processing composers
+        
+        // Mouse interaction variables
+        let raycaster, mouse;
+        let hoveredObject = null;
+        let originalMaterials = new Map(); // Store original materials for restoration
+        
+        // Object management variables
+        let sceneObjects = new Map(); // Store all scene objects with their info
+        let objectVisibility = new Map(); // Track visibility states
+        let objectMaterialEnabled = new Map(); // Track material application states
+        let bloomObjects = []; // Store bloom object references
+        
+        // Layer constants
+        const BLOOM_LAYER = 1;
+        const NORMAL_LAYER = 0;
+        
+        // Bloom control parameters
+        let bloomStrength = 2.5;
+        let bloomRadius = 1.0;
+        let bloomThreshold = 0.6;
+        
+        // Camera animation variables
+        let isAnimatingCamera = false;
+        let animationId = null;
+        let focusedObject = null;
+        let originalCameraPosition = new THREE.Vector3();
+        let originalCameraTarget = new THREE.Vector3();
+        
+        // Texture paths mapping
+        const texturePaths = {
+            "stop": {
+                "stop1": {
+                    baseColor: 'PHOTOBOOTH_1/TXT/STOP/STOP_standardSurface50SG_BaseColor.1001.png',
+                    roughness: 0.8,
+                    metalness: 0.1,
+                },
+                "stop1003": {
+                    baseColor: 'PHOTOBOOTH_1/TXT/STOP/STOP_standardSurface7SG_BaseColor.1001.png',
+                    roughness: 0.8,
+                    metalness: 0.1
+                },
+                "stop1004": {
+                    baseColor: '#2C2B2B',
+                    roughness: 0.8,
+                    metalness: 0.1
+                }
+            },
+            "cone":{
+                "cameracone":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CONE/CONE_camera_standardSurface5SG_BaseColor.1001.png",
+                    orm: "PHOTOBOOTH_1/TXT/CONE/CONE_camera_standardSurface5SG_OcclusionRoughnessMetallic.1001.png",
+                    roughness: 0.8,
+                    metalness: 0.1
+                },
+                "cameracone001":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CONE/CONE_camera_standardSurface6SG_BaseColor.1001.png",
+                    orm: "PHOTOBOOTH_1/TXT/CONE/CONE_camera_standardSurface6SG_OcclusionRoughnessMetallic.1001.png",
+                    roughness: 0.8,
+                    metalness: 0.1
+                }
+            },
+            "cameratrash":{
+                "cameratrash":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CESTINO/CESTINO_BaseColor_0.png",
+                    metalness: 0.8,
+                    roughness: 0.3
+                }
+            },
+            "cameracamera":{
+                "cameracamera":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_Camera_rough_0.png",
+                    normalMap:"PHOTOBOOTH_1/TXT/CAMERA/camera_Camera_normal.png",
+                    roughness: 0,
+                    metalness: 1
+                },
+                "cameracamera001":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_001.png",
+                    roughness: 1,
+                    metalness: 0
+                },
+                "cameracamera002":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_002.png",
+                    roughness: 1,
+                    metalness: 0
+                },
+                "cameracamera003":{
+    
+                    roughness: 0,
+                    metalness: 1
+                },
+                "cameracamera004":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_004_rough_a_0.png",
+                    roughness: 0,
+                    metalness: 1
+                },
+                "cameracamera005":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_005_rough_a_0.png",
+                    roughness: 0,
+                    metalness: 1
+                },
+                "cameracamera006":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_006.png",
+                    roughness: 1,
+                    metalness: 0
+                },
+                 "cameracamera007":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_007_schermo.png",
+                    roughness: 1,
+                    metalness: 0,
+                    emissionColor: "#00ff88"
+                },
+                "cameracamera008":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_008.png",
+                    roughness: 1,
+                    metalness: 0
+                },
+                 "cameracamera009":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CAMERA/CAMERA_BaseColor.png",
+                    roughness: 0.5,
+                    metalness: 0.8,
+                    emissionColor: "#0088ff"
+                },
+            },
+            "chair001":{
+                "chair001":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CHAIR/CHAIR_standardSurface10SG_BaseColor.1001.png",
+                    roughness: 0.7,
+                    metalness: 0
+                }
+            },
+            "wallpcube19":{
+                "wallpcube19":{
+                    baseColor:"PHOTOBOOTH_1/TXT/WALL/WALL_initialShadingGroup_BaseColor.1001.png",
+                    normalMap:"PHOTOBOOTH_1/TXT/WALL/WALL_initialShadingGroup_Normal.1001.png",
+                    orm:"PHOTOBOOTH_1/TXT/WALL/WALL_initialShadingGroup_OcclusionRoughnessMetallic.1001.png",
+                    metalness: 0.0
+
+                }
+            },
+            "pcube16":{
+                "pcube16":{
+                    baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_DOWN_standardSurface39SG_BaseColor.1001.png",
+                    normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_DOWN_standardSurface39SG_Normal.1001.png",
+                    orm:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_DOWN_standardSurface39SG_Roughness.1001.png",
+                    metalness: 0.0
+                }
+            },
+            "pcube7":{
+                "pcube7":{
+                    baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_UP_standardSurface38SG_BaseColor.1001.png",
+                    normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_UP_standardSurface38SG_Normal.1001.png",
+                    orm:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_UP_standardSurface38SG_Roughness.1001.png",
+                    metalness: 0.0
+                }
+            },
+            "pcube19":{
+                "pcube19":{
+                    baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/PHOTOBOOTH_standardSurface51SG_BaseColor.1001.png",
+                    normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/PHOTOBOOTH_standardSurface51SG_Normal.1001.png",
+                    orm:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/PHOTOBOOTH_standardSurface51SG_OcclusionRoughnessMetallic.1001.png",
+                    metalness: 0.0
+                }
+            },
+            "pcube2":{
+                "pcube2":{
+                    baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/ROOF_standardSurface42SG_BaseColor.1001.png",
+                    normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/ROOF_standardSurface42SG_Normal.1001.png",
+                    orm:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/ROOF_standardSurface42SG_Roughness.1001.png",
+                    metalness: 0.0
+                }
+            },
+            "pcube5":{
+                "pcube5":{
+                    baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/AIR_DUCT_standardSurface43SG_BaseColor.1001.png",
+                    normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/AIR_DUCT_standardSurface43SG_Normal.1001.png",
+                    orm:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/AIR_DUCT_standardSurface43SG_OcclusionRoughnessMetallic.1001.png",
+                    metalness: 0.0
+                }
+            },
+            "sweep2":{
+                "sweep2":{
+                    baseColor:"PHOTOBOOTH_1/TXT/SWEEP/sweep.png",
+                }
+            },
+            "pcube4":{
+                "pcube4":{
+                    baseColor: "#2F2BA9",
+                    roughness: 0,
+                    metalness: 0,
+                    emissionColor: "#2F2BA9"
+                },
+                "pcube4001":{
+                    baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/SCREEN_OUT_standardSurface45SG_BaseColor.1001.png",
+                    normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/SCREEN_OUT_standardSurface45SG_Normal.1001.png",
+                    metalness: 0.1
+                }
+
+            }, 
+            "pcube6":{
+                "pcube6":{
+                    baseColor: "#ffffff",
+                    roughness: 0,
+                    metalness: 0,
+                    emissionColor: "#ffffff"
+                },
+                "pcube6001":{
+                    baseColor: "#000000",
+                    roughness: 0.1,
+                    metalness: 0.1,
+                    emissionColor: null
+                }
+            },
+            "floor_sign":{
+                "floor_sign":{
+                    baseColor:"PHOTOBOOTH_1/TXT/FLOOR/FLOOR_SIGN_camera_standardSurface3SG_BaseColor.1001.png",
+                    normalMap:"PHOTOBOOTH_1/TXT/FLOOR/FLOOR_SIGN_camera_standardSurface3SG_Normal.1001.png",
+                    orm:"PHOTOBOOTH_1/TXT/FLOOR/FLOOR_SIGN_camera_standardSurface3SG_OcclusionRoughnessMetallic.1001.png",
+                    metalness: 0.8,
+                    roughness: 0.3
+                }
+            },
+            "sprayspray":{
+                "sprayspray2":{
+                    baseColor:"PHOTOBOOTH_1/TXT/SPRAY/SPRAY_2.png",
+                    metalness: 0.8,
+                    roughness: 0.3
+                },
+                "sprayspray2001":{
+                    baseColor:"PHOTOBOOTH_1/TXT/SPRAY/SPRAY2_001.png",
+                    metalness: 0.8,
+                    roughness: 0.3
+                },
+                "sprayspray2002":{
+                    baseColor:"#ffffff",
+                    metalness: 0.8,
+                    roughness: 0.3
+                },
+                "sprayspray2003":{
+                    baseColor:"PHOTOBOOTH_1/TXT/SPRAY/SORAY2_003.png",
+                    metalness: 0.8,
+                    roughness: 0.3
+                },
+            },
+            "curtain":{
+                "curtain_back":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CURTAIN/CURTAIN_standardSurface13SG_BaseColor.1001.png",
+                    roughness: 0.7,
+                    metalness: 0
+                },
+                "curtain_front":{
+                    baseColor:"PHOTOBOOTH_1/TXT/CURTAIN/CURTAIN_standardSurface13SG_BaseColor.1001.png",
+                    roughness: 0.7,
+                    metalness: 0
+                }
+            },
+            "pcube18":{
+                "pcube18":{
+                    baseColor:"PHOTOBOOTH_1/TXT/SCREEN/PHOTOBOOTH_standardSurface49SG_BaseColor.1001.png",
+                    metalness: 0.0
+                },
+                "pcube18001":{
+                    baseColor:"#ffffff",
+                    metalness: 0.0
+                }
+            },
+            "pcube3": {
+                "pcube3": {
+                    baseColor: "#ffffff",
+                    roughness: 0.1,
+                    metalness: 0.9
+                }
+            },
+            "pcylinder":{
+                "buttonpcylinder19":{
+                    baseColor: "#127003",
+                    roughness: 0,
+                    metalness: 0,
+                    emissionColor: "#0a4d02",
+                    emissiveIntensity: 1.0
+                },
+                "default":{
+                    baseColor: "#ffffff",
+                    roughness: 0.1,
+                    metalness: 0.9
+                }
+    
+            }
+
+        };
+
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            bloomScene = new THREE.Scene(); // Bloom scene for glowing objects
+            scene.background = new THREE.Color(0x000000);
+
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(2, 2, 3);
+            camera.layers.enableAll(); // Enable all layers for bloom effect
+
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.8;
+            
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            // Initialize raycaster and mouse for hover detection
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Add orbit controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 0;
+            controls.maxDistance = Infinity;
+            controls.target.set(0, 0.5, 0);
+
+            // Add mouse event listeners
+            renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+            renderer.domElement.addEventListener('click', onMouseClick, false);
+            renderer.domElement.addEventListener('dblclick', onMouseDoubleClick, false);
+            
+            // Initialize object menu
+            initializeObjectMenu();
+
+            // Add lights
+            setupLighting();
+
+            // Load model
+            loadPhotoboothModel();
+
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function setupLighting() {
+            // Brighter ambient light for better metallic visibility
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            // Main directional light (key light)
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            mainLight.position.set(10, 10, 5);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            mainLight.shadow.camera.near = 0.5;
+            mainLight.shadow.camera.far = 50;
+            mainLight.shadow.camera.left = -10;
+            mainLight.shadow.camera.right = 10;
+            mainLight.shadow.camera.top = 10;
+            mainLight.shadow.camera.bottom = -10;
+            scene.add(mainLight);
+
+            // Fill light
+            const fillLight = new THREE.DirectionalLight(0x8bb7f0, 0.7);
+            fillLight.position.set(-5, 5, 2);
+            scene.add(fillLight);
+
+            // Back light
+            const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            backLight.position.set(-5, 3, -5);
+            scene.add(backLight);
+
+            // Point lights for more dramatic lighting
+            const pointLight1 = new THREE.PointLight(0xffffff, 1.0, 15);
+            pointLight1.position.set(3, 4, 3);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0x88ccff, 0.8, 12);
+            pointLight2.position.set(-3, 3, -2);
+            scene.add(pointLight2);
+            
+            // Add additional point lights for metallic reflections
+            const metalLight1 = new THREE.PointLight(0xffffff, 0.6, 10);
+            metalLight1.position.set(0, 8, 0);
+            scene.add(metalLight1);
+            
+            const metalLight2 = new THREE.PointLight(0xaaccff, 0.4, 8);
+            metalLight2.position.set(-8, 2, 8);
+            scene.add(metalLight2);
+        }
+        
+        function loadEnvironmentMap() {
+            // Try to load HDR environment map, fallback to simple cube texture
+            const loader = new THREE.RGBELoader();
+            
+            // If HDR file exists, use it
+            loader.load('data/models/shanghai_bund_4k.hdr', 
+                function(texture) {
+                    texture.mapping = THREE.EquirectangularReflectionMapping;
+                    scene.environment = texture;
+                    console.log('HDR environment map loaded successfully');
+                },
+                function(progress) {
+                    console.log('Loading HDR environment:', (progress.loaded / progress.total * 100) + '%');
+                },
+                function(error) {
+                    console.warn('HDR environment map not found, using fallback lighting');
+                    // Fallback: create a simple environment using cube camera
+                    createFallbackEnvironment();
+                }
+            );
+        }
+        
+        function createFallbackEnvironment() {
+            // Create a simple gradient environment as fallback
+            const pmremGenerator = new THREE.PMREMGenerator(renderer);
+            const renderTarget = pmremGenerator.fromScene(createEnvironmentScene());
+            scene.environment = renderTarget.texture;
+            pmremGenerator.dispose();
+            console.log('Fallback environment created');
+        }
+        
+        function createEnvironmentScene() {
+            const envScene = new THREE.Scene();
+            
+            // Create a simple gradient background
+            const geometry = new THREE.SphereGeometry(100, 32, 16);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x87CEEB, // Sky blue
+                side: THREE.BackSide
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            envScene.add(sphere);
+            
+            return envScene;
+        }
+        
+        function setupPostProcessing() {
+            try {
+                console.log('Setting up selective bloom for objects:', bloomObjects.length);
+
+                // Create render targets for selective bloom
+                const bloomRenderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+                const normalRenderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+
+                // Bloom composer - renders only BLOOM_LAYER objects
+                bloomComposer = new THREE.EffectComposer(renderer, bloomRenderTarget);
+                bloomComposer.renderToScreen = false;
+                
+                const bloomRenderPass = new THREE.RenderPass(scene, camera);
+                bloomRenderPass.clear = true;
+                
+                const bloomPass = new THREE.UnrealBloomPass(
+                    new THREE.Vector2(window.innerWidth, window.innerHeight),
+                    bloomStrength, // Dynamic bloom strength
+                    bloomRadius, // Dynamic bloom radius
+                    bloomThreshold // Dynamic bloom threshold
+                );
+                
+                // Store reference to bloom pass for dynamic updates
+                window.currentBloomPass = bloomPass;
+                
+                bloomComposer.addPass(bloomRenderPass);
+                bloomComposer.addPass(bloomPass);
+
+                // Final composer - combines normal scene with bloom
+                finalComposer = new THREE.EffectComposer(renderer);
+                
+                const normalRenderPass = new THREE.RenderPass(scene, camera);
+                normalRenderPass.clear = true;
+                
+                const finalPass = new THREE.ShaderPass(
+                    new THREE.ShaderMaterial({
+                        uniforms: {
+                            baseTexture: { value: null },
+                            bloomTexture: { value: null }
+                        },
+                        vertexShader: `
+                            varying vec2 vUv;
+                            void main() {
+                                vUv = uv;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
+                        fragmentShader: `
+                            uniform sampler2D baseTexture;
+                            uniform sampler2D bloomTexture;
+                            varying vec2 vUv;
+                            
+                            void main() {
+                                vec4 baseColor = texture2D(baseTexture, vUv);
+                                vec4 bloomColor = texture2D(bloomTexture, vUv);
+                                
+                                // Additive blend
+                                gl_FragColor = baseColor + bloomColor * 0.8;
+                            }
+                        `
+                    }), "baseTexture"
+                );
+                
+                finalComposer.addPass(normalRenderPass);
+                finalComposer.addPass(finalPass);
+                
+                // Assign bloom texture to final pass after composer is created
+                finalPass.uniforms.bloomTexture.value = bloomComposer.renderTarget2.texture;
+                
+                console.log('✓ Selective bloom setup complete');
+                console.log('Composers ready check:', {
+                    bloomComposer: !!bloomComposer,
+                    finalComposer: !!finalComposer,
+                    bloomObjects: bloomObjects.length,
+                    bloomTexture: !!finalPass.uniforms.bloomTexture.value
+                });
+            } catch (error) {
+                console.error('Error setting up post-processing:', error);
+            }
+        }
+
+        function loadPhotoboothModel() {
+            const loader = new THREE.GLTFLoader();
+            
+            loader.load('PHOTOBOOTH_1/phb.glb', 
+                function(gltf) {
+                    photoboothModel = gltf.scene;
+                    
+                    // Apply textures to materials
+                    applyTextures(photoboothModel);
+                    
+                    // Enable shadows and store original materials
+                    photoboothModel.traverse(function(child) {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            
+                            // Store original material for hover restoration
+                            originalMaterials.set(child, child.material.clone());
+                        }
+                    });
+                    
+                    // Scale and position the model
+                    photoboothModel.scale.setScalar(2);
+                    photoboothModel.position.set(0, 0, 0);
+                    
+                    scene.add(photoboothModel);
+                    
+                    // Calculate bounding box and set orbit center
+                    const box = new THREE.Box3().setFromObject(photoboothModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    
+                    // Update orbit controls target to the model's center
+                    controls.target.copy(center);
+                    controls.update();
+                    
+                    // Position camera at a good distance from the model
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const fov = camera.fov * (Math.PI / 180);
+                    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                    cameraZ *= 1.5; // Add some padding
+                    
+                    camera.position.set(center.x + cameraZ, center.y + cameraZ * 0.5, center.z + cameraZ);
+                    camera.lookAt(center);
+                    
+                    // Store original camera position and target for reset functionality
+                    originalCameraPosition.copy(camera.position);
+                    originalCameraTarget.copy(center);
+                    
+                    // Load HDR environment map
+                    loadEnvironmentMap();
+                    
+                    // Update UI
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('status').textContent = 'Model loaded successfully!';
+                    
+                    // Populate object menu
+                    populateObjectMenu();
+                    
+                    // Setup post-processing immediately after model and textures are loaded
+                    setupPostProcessing();
+                    
+                    console.log('Photobooth model loaded:', photoboothModel);
+                },
+                function(progress) {
+                    const percentage = (progress.loaded / progress.total * 100).toFixed(0);
+                    document.getElementById('loading').textContent = `Loading Photobooth Model... ${percentage}%`;
+                },
+                function(error) {
+                    console.error('Error loading model:', error);
+                    document.getElementById('loading').textContent = 'Error loading model';
+                    document.getElementById('status').textContent = 'Failed to load model';
+                }
+            );
+        }
+
+        function applyTextures(model) {
+            const textureLoader = new THREE.TextureLoader();
+            const loadedTextures = new Map();
+            
+            // Function to load texture with caching
+            function loadTexture(path) {
+                if (!loadedTextures.has(path)) {
+                    const texture = textureLoader.load(path, 
+                        function(texture) {
+                            texture.wrapS = THREE.RepeatWrapping;
+                            texture.wrapT = THREE.RepeatWrapping;
+                            texture.encoding = THREE.sRGBEncoding;
+                            texture.flipY = false; // Important for GLTF models
+                            console.log('Successfully loaded texture:', path);
+                        },
+                        function(progress) {
+                            console.log('Loading texture progress:', path, (progress.loaded / progress.total * 100) + '%');
+                        },
+                        function(error) {
+                            console.error('Failed to load texture:', path, error);
+                        }
+                    );
+                    loadedTextures.set(path, texture);
+                }
+                return loadedTextures.get(path);
+            }
+
+            // Apply textures based on material names or mesh names using dynamic texture paths
+            model.traverse(function(child) {
+                if (child.isMesh && child.material) {
+                    const meshName = child.name.toLowerCase();
+                    const materialName = child.material.name.toLowerCase();
+                    
+                    console.log('Processing mesh:', child.name, 'Material:', child.material.name);
+                    
+                    // Special logging for objects that should have bloom effects
+                    if (meshName.includes('cone') || materialName.includes('cone') || child.name.toLowerCase().includes('camera') || meshName.includes('pcube4')) {
+                        console.log(`BLOOM DEBUG - Found potential bloom object:`, {
+                            name: child.name,
+                            meshName: meshName,
+                            materialName: materialName,
+                            visible: child.visible,
+                            material: child.material.name
+                        });
+                    }
+                    
+                    // Try to find matching texture configuration for this object
+                    const appliedTexture = applyDynamicTextures(child, meshName, materialName, loadTexture);
+                    
+                    // Let applyDynamicTextures handle all emission colors from texturePaths
+                    // No special hardcoded handling needed
+                    
+                    if (!appliedTexture) {
+                        // Apply white metallic material for objects without specific textures
+                        if (child.material.isMeshStandardMaterial) {
+                            child.material.color.setHex(0xffffff); // White color
+                            child.material.roughness = 0.3; // Slightly rough for better visibility
+                            child.material.metalness = 0.6; // Mostly metallic but not fully
+                            child.material.map = null; // Remove any existing texture
+                            child.material.needsUpdate = true;
+                        } else {
+                            // Convert to MeshStandardMaterial if it's not already
+                            const newMaterial = new THREE.MeshStandardMaterial({
+                                color: 0xffffff, // White
+                                roughness: 0.3, // Slightly rough
+                                metalness: 0.6 // Mostly metallic
+                            });
+                            child.material = newMaterial;
+                        }
+                    }
+                }
+            });
+        }
+
+        function applyDynamicTextures(meshObject, meshName, materialName, loadTexture) {
+            // Debug logging for cone objects specifically
+            if (meshName.includes('cone') || materialName.includes('cone')) {
+                console.log(`CONE DEBUG - Processing mesh: "${meshObject.name}", meshName: "${meshName}", materialName: "${materialName}"`);
+            }
+            
+            // Check each object type in texturePaths
+            for (const objectType in texturePaths) {
+                const objectTypeConfig = texturePaths[objectType];
+                
+                // Check if this mesh matches the object type (by name or material name)
+                // Also check for exact matches and common variations
+                const isMatch = meshName.includes(objectType) || 
+                               materialName.includes(objectType) ||
+                               meshName === objectType ||
+                               materialName === objectType;
+                               
+                if (isMatch) {
+                    console.log(`Found matching object type '${objectType}' for mesh:`, meshObject.name);
+                    
+                    // Clone the material to avoid affecting other objects
+                    let newMaterial = meshObject.material.clone();
+                    
+                    // Convert to MeshStandardMaterial if it's not already
+                    if (!newMaterial.isMeshStandardMaterial) {
+                        const oldMaterial = newMaterial;
+                        newMaterial = new THREE.MeshStandardMaterial();
+                        newMaterial.color.copy(oldMaterial.color || new THREE.Color(0xffffff));
+                        if (oldMaterial.map) newMaterial.map = oldMaterial.map;
+                    }
+                    
+                    // Reset color to white so texture shows properly
+                    newMaterial.color = new THREE.Color(0xffffff);
+                    
+                    // Look for specific configuration for this exact mesh name
+                    let meshConfig = null;
+                    const exactMeshName = meshObject.name.toLowerCase();
+                    const exactMaterialName = meshObject.material.name.toLowerCase();
+                    
+                    // Try multiple matching strategies
+                    if (objectTypeConfig[exactMeshName]) {
+                        meshConfig = objectTypeConfig[exactMeshName];
+                        console.log(`Found specific configuration for mesh '${exactMeshName}'`);
+                    } else if (objectTypeConfig[exactMaterialName]) {
+                        meshConfig = objectTypeConfig[exactMaterialName];
+                        console.log(`Found specific configuration for material '${exactMaterialName}'`);
+                    } else if (objectTypeConfig[objectType]) {
+                        meshConfig = objectTypeConfig[objectType];
+                        console.log(`Found configuration for object type '${objectType}'`);
+                    } else if (objectTypeConfig['default']) {
+                        meshConfig = objectTypeConfig['default'];
+                        console.log(`Using default configuration for object type '${objectType}'`);
+                    } else {
+                        // If no specific config found, use the first available config
+                        const firstKey = Object.keys(objectTypeConfig)[0];
+                        if (firstKey) {
+                            meshConfig = objectTypeConfig[firstKey];
+                            console.log(`Using first available configuration '${firstKey}' for object type '${objectType}'`);
+                        }
+                    }
+                    
+                    if (meshConfig) {
+                        // Apply base color (texture or hex color)
+                        if (meshConfig.baseColor) {
+                            // Check if baseColor is a hex color (starts with #)
+                            if (meshConfig.baseColor.startsWith('#')) {
+                                try {
+                                    newMaterial.color = new THREE.Color(meshConfig.baseColor);
+                                    newMaterial.map = null; // Remove any existing texture map
+                                    console.log(`Applied baseColor as hex: ${meshConfig.baseColor}`);
+                                } catch (error) {
+                                    console.warn(`Failed to apply baseColor hex: ${meshConfig.baseColor}`, error);
+                                }
+                            } else {
+                                // It's a texture path
+                                try {
+                                    newMaterial.map = loadTexture(meshConfig.baseColor);
+                                    console.log(`Applied baseColor texture: ${meshConfig.baseColor}`);
+                                } catch (error) {
+                                    console.warn(`Failed to load baseColor texture: ${meshConfig.baseColor}`, error);
+                                }
+                            }
+                        }
+                        
+                        // Apply normal map
+                        if (meshConfig.normalMap) {
+                            try {
+                                newMaterial.normalMap = loadTexture(meshConfig.normalMap);
+                                newMaterial.normalScale = new THREE.Vector2(1, 1);
+                                console.log(`Applied normalMap texture: ${meshConfig.normalMap}`);
+                            } catch (error) {
+                                console.warn(`Failed to load normalMap texture: ${meshConfig.normalMap}`, error);
+                            }
+                        }
+                        
+                        // Apply roughness map
+                        if (meshConfig.roughnessMap) {
+                            try {
+                                newMaterial.roughnessMap = loadTexture(meshConfig.roughnessMap);
+                                console.log(`Applied roughnessMap texture: ${meshConfig.roughnessMap}`);
+                            } catch (error) {
+                                console.warn(`Failed to load roughnessMap texture: ${meshConfig.roughnessMap}`, error);
+                            }
+                        }
+                        
+                        // Apply metalness map
+                        if (meshConfig.metalnessMap) {
+                            try {
+                                newMaterial.metalnessMap = loadTexture(meshConfig.metalnessMap);
+                                console.log(`Applied metalnessMap texture: ${meshConfig.metalnessMap}`);
+                            } catch (error) {
+                                console.warn(`Failed to load metalnessMap texture: ${meshConfig.metalnessMap}`, error);
+                            }
+                        }
+                        
+                        // Apply ORM map (Occlusion Roughness Metallic combined)
+                        if (meshConfig.orm) {
+                            try {
+                                const ormTexture = loadTexture(meshConfig.orm);
+                                newMaterial.aoMap = ormTexture; // R channel - Occlusion
+                                newMaterial.roughnessMap = ormTexture; // G channel - Roughness
+                                newMaterial.metalnessMap = ormTexture; // B channel - Metallic
+                                // Need to specify which UV channel to use for AO map
+                                newMaterial.aoMapIntensity = 1.0;
+                                console.log(`Applied ORM texture: ${meshConfig.orm}`);
+                            } catch (error) {
+                                console.warn(`Failed to load ORM texture: ${meshConfig.orm}`, error);
+                            }
+                        }
+                        
+                        // Apply material properties
+                        if (typeof meshConfig.roughness === 'number') {
+                            newMaterial.roughness = meshConfig.roughness;
+                        } else {
+                            newMaterial.roughness = 0.8; // Default
+                        }
+                        
+                        if (typeof meshConfig.metalness === 'number') {
+                            newMaterial.metalness = meshConfig.metalness;
+                        } else {
+                            newMaterial.metalness = 0.1; // Default
+                        }
+                        
+                        if (typeof meshConfig.opacity === 'number') {
+                            newMaterial.opacity = meshConfig.opacity;
+                            if (meshConfig.opacity < 1.0) {
+                                newMaterial.transparent = true;
+                            }
+                        }
+                        
+                        // Apply emissive properties if specified (check both property names)
+                        const emissionColor = meshConfig.emissionColor || meshConfig.emissiveColor;
+                        if (emissionColor) {
+                            newMaterial.emissive = new THREE.Color(emissionColor);
+                            // Set up bloom effect for objects with emissionColor, pass custom intensity if available
+                            const customIntensity = typeof meshConfig.emissiveIntensity === 'number' ? meshConfig.emissiveIntensity : null;
+                            setupBloomObject(meshObject, newMaterial, emissionColor, customIntensity);
+                            console.log(`✓ Applied emission color ${emissionColor} to ${meshObject.name}`);
+                        }
+                        
+                        if (typeof meshConfig.emissiveIntensity === 'number') {
+                            newMaterial.emissiveIntensity = meshConfig.emissiveIntensity;
+                        }
+                        
+                        newMaterial.needsUpdate = true;
+                        meshObject.material = newMaterial;
+                        
+                        console.log(`Successfully applied dynamic textures to '${meshObject.name}' of type '${objectType}'`);
+                        return true; // Texture was applied
+                    }
+                    
+                    break; // Found matching object type, stop searching
+                }
+            }
+            
+            return false; // No texture configuration found
+        }
+
+        function applyTextureSet(material, objectType, loadTexture, materialIndex = 0, meshObject = null) {
+            const textures = texturePaths[objectType];
+            if (!textures) return;
+            
+            // Get the material configuration
+            const materialKeys = Object.keys(textures);
+            const materialKey = materialKeys[materialIndex] || materialKeys[0];
+            const materialConfig = textures[materialKey];
+            if (!materialConfig) return;
+            
+            // Apply base color texture
+            if (materialConfig.baseColor) {
+                material.map = loadTexture(materialConfig.baseColor);
+            }
+            
+            // Apply normal map
+            if (materialConfig.normalMap) {
+                material.normalMap = loadTexture(materialConfig.normalMap);
+                material.normalScale = new THREE.Vector2(1, 1);
+            }
+            
+            // Apply roughness and metalness values
+            if (materialConfig.roughness !== undefined) {
+                material.roughness = materialConfig.roughness;
+            }
+            if (materialConfig.metalness !== undefined) {
+                material.metalness = materialConfig.metalness;
+            }
+            
+            // Apply ORM map (Occlusion Roughness Metallic)
+            if (materialConfig.orm) {
+                const ormTexture = loadTexture(materialConfig.orm);
+                material.aoMap = ormTexture; // R channel
+                material.roughnessMap = ormTexture; // G channel
+                material.metalnessMap = ormTexture; // B channel
+                material.aoMapIntensity = 1.0;
+            }
+            
+            // Handle emission color for bloom effect
+            if (materialConfig.emissionColor && meshObject) {
+                const customIntensity = typeof materialConfig.emissiveIntensity === 'number' ? materialConfig.emissiveIntensity : null;
+                setupBloomObject(meshObject, material, materialConfig.emissionColor, customIntensity);
+            }
+            
+            material.needsUpdate = true;
+            console.log('Applied textures to material:', material.name, 'for object type:', objectType, 'material key:', materialKey);
+        }
+        
+        function setupBloomObject(meshObject, material, emissionColor, customIntensity = null) {
+            try {
+                // Parse hex color
+                const color = new THREE.Color(emissionColor);
+                
+                console.log(`Setting up bloom for ${meshObject.name} with color ${emissionColor}:`, color);
+                
+                // Set up emissive properties with balanced intensity
+                material.emissive = color.clone();
+                material.emissiveIntensity = customIntensity || 1.5; // Use custom intensity or default reduced value
+                
+                // Ensure proper material configuration for bloom
+                material.toneMapped = false; // Prevent tone mapping from affecting emissive colors
+                
+                // Fix depth and rendering issues
+                material.depthTest = true; // Ensure proper depth testing
+                material.depthWrite = true; // Ensure proper depth writing
+                material.transparent = false; // Ensure it's not transparent unless needed
+                
+                // Set render order to ensure proper sorting (lower numbers render first)
+                meshObject.renderOrder = 0; // Default render order, don't push to front
+                
+                material.needsUpdate = true;
+                
+                // Mark object for bloom rendering (no layer changes needed)
+                meshObject.userData.hasBloom = true;
+                
+                console.log(`✓ Bloom effect applied to ${meshObject.name} with color preservation`);
+                console.log('Bloom material properties:', {
+                    emissive: material.emissive.getHexString(),
+                    emissiveIntensity: material.emissiveIntensity,
+                    toneMapped: material.toneMapped
+                });
+                
+                // Store reference for tracking
+                bloomObjects.push({
+                    original: meshObject,
+                    clone: null,
+                    emissiveColor: color.clone() // Store original color for debugging
+                });
+                
+                console.log(`Total bloom objects: ${bloomObjects.length}`);
+            } catch (error) {
+                console.error('Error setting up bloom object:', error);
+            }
+        }
+
+        function onMouseMove(event) {
+            // Calculate mouse position in normalized device coordinates (-1 to +1)
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            // Perform raycasting
+            checkHover();
+        }
+
+        function checkHover() {
+            if (!photoboothModel) return;
+            
+            // Update the raycaster with camera and mouse position
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Get all intersectable objects (meshes) from the photobooth model
+            const intersectableObjects = [];
+            photoboothModel.traverse(function(child) {
+                if (child.isMesh) {
+                    intersectableObjects.push(child);
+                }
+            });
+            
+            // Calculate objects intersecting the raycaster
+            const intersects = raycaster.intersectObjects(intersectableObjects);
+            
+            if (intersects.length > 0) {
+                const newHoveredObject = intersects[0].object;
+                
+                // If we're hovering over a new object
+                if (hoveredObject !== newHoveredObject) {
+                    // Restore previous object's material
+                    if (hoveredObject) {
+                        restoreObjectMaterial(hoveredObject);
+                    }
+                    
+                    // Set new hovered object
+                    hoveredObject = newHoveredObject;
+                    highlightObject(hoveredObject);
+                    
+                    // Print object name to console
+                    console.log('Hovering over object:', hoveredObject.name || 'Unnamed object', 
+                               'Material:', hoveredObject.material.name || 'Unnamed material');
+                    
+                    // Update status in UI
+                    document.getElementById('status').textContent = 
+                        `Hovering: ${hoveredObject.name || 'Unnamed object'}`;
+                    
+                    // Display material properties
+                    displayMaterialProperties(hoveredObject);
+                }
+            } else {
+                // No object being hovered
+                if (hoveredObject) {
+                    restoreObjectMaterial(hoveredObject);
+                    hoveredObject = null;
+                    document.getElementById('status').textContent = 'Model loaded successfully!';
+                    
+                    // Hide material properties
+                    document.getElementById('objectProperties').style.display = 'none';
+                }
+            }
+        }
+
+        function onMouseClick(event) {
+            if (!photoboothModel || isAnimatingCamera) return;
+            
+            // Calculate mouse position in normalized device coordinates (-1 to +1)
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            // Update the raycaster with camera and mouse position
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Get all intersectable objects (meshes) from the photobooth model
+            const intersectableObjects = [];
+            photoboothModel.traverse(function(child) {
+                if (child.isMesh && child.visible) {
+                    intersectableObjects.push(child);
+                }
+            });
+            
+            // Calculate objects intersecting the raycaster
+            const intersects = raycaster.intersectObjects(intersectableObjects);
+            
+            if (intersects.length > 0) {
+                const clickedObject = intersects[0].object;
+                focusOnObject(clickedObject);
+                
+                console.log('Clicked on object:', clickedObject.name || 'Unnamed object');
+                
+                // Update status in UI
+                document.getElementById('status').textContent = 
+                    `Focused on: ${clickedObject.name || 'Unnamed object'}`;
+            }
+        }
+
+        function highlightObject(object) {
+            if (!object || !object.material) return;
+            
+            // Clone the material and make it emissive for highlighting
+            const highlightMaterial = object.material.clone();
+            
+            // Preserve existing emissive color if it exists, otherwise use subtle white glow
+            if (highlightMaterial.emissive && (highlightMaterial.emissive.r > 0 || highlightMaterial.emissive.g > 0 || highlightMaterial.emissive.b > 0)) {
+                // Object already has emission color, just increase intensity for highlight
+                highlightMaterial.emissiveIntensity = (highlightMaterial.emissiveIntensity || 1.0) * 1.5;
+            } else {
+                // No existing emission, add subtle white glow
+                highlightMaterial.emissive = new THREE.Color(0x444444);
+                highlightMaterial.emissiveIntensity = 0.3;
+            }
+            
+            // Slightly increase the brightness
+            if (highlightMaterial.color) {
+                highlightMaterial.color.multiplyScalar(1.2);
+            }
+            
+            highlightMaterial.needsUpdate = true;
+            object.material = highlightMaterial;
+        }
+
+        function restoreObjectMaterial(object) {
+            if (!object || !originalMaterials.has(object)) return;
+            
+            // Restore the original material
+            object.material = originalMaterials.get(object).clone();
+            object.material.needsUpdate = true;
+        }
+
+        function displayMaterialProperties(object) {
+            if (!object || !object.material) return;
+            
+            const material = object.material;
+            const propertiesPanel = document.getElementById('objectProperties');
+            
+            // Show the properties panel
+            propertiesPanel.style.display = 'block';
+            
+            // Update object name
+            document.getElementById('propName').textContent = 
+                `Object: ${object.name || 'Unnamed'} (${material.name || 'Unnamed Material'})`;
+            
+            // Base Color / Diffuse Map
+            let baseColorText = 'Base Color: ';
+            if (material.map) {
+                const textureName = getTextureFileName(material.map);
+                baseColorText += `${textureName}`;
+            } else if (material.color) {
+                const hex = '#' + material.color.getHexString().toUpperCase();
+                baseColorText += `Color ${hex}`;
+            } else {
+                baseColorText += 'None';
+            }
+            document.getElementById('propBaseColor').textContent = baseColorText;
+            
+            // Normal Map
+            let normalText = 'Normal Map: ';
+            if (material.normalMap) {
+                const textureName = getTextureFileName(material.normalMap);
+                const scale = material.normalScale ? `(Scale: ${material.normalScale.x}, ${material.normalScale.y})` : '';
+                normalText += `${textureName} ${scale}`;
+            } else {
+                normalText += 'None';
+            }
+            document.getElementById('propNormalMap').textContent = normalText;
+            
+            // ORM Map (Occlusion Roughness Metallic)
+            let ormText = 'ORM Map: ';
+            if (material.aoMap && material.roughnessMap === material.aoMap && material.metalnessMap === material.aoMap) {
+                const textureName = getTextureFileName(material.aoMap);
+                const aoIntensity = material.aoMapIntensity !== undefined ? `(AO: ${material.aoMapIntensity.toFixed(2)})` : '';
+                ormText += `${textureName} ${aoIntensity}`;
+            } else {
+                const parts = [];
+                if (material.aoMap) parts.push(`AO: ${getTextureFileName(material.aoMap)}`);
+                if (material.roughnessMap && material.roughnessMap !== material.aoMap) {
+                    parts.push(`R: ${getTextureFileName(material.roughnessMap)}`);
+                }
+                if (material.metalnessMap && material.metalnessMap !== material.aoMap && material.metalnessMap !== material.roughnessMap) {
+                    parts.push(`M: ${getTextureFileName(material.metalnessMap)}`);
+                }
+                ormText += parts.length > 0 ? parts.join(', ') : 'None';
+            }
+            document.getElementById('propORM').textContent = ormText;
+            
+            // Roughness
+            let roughnessText = 'Roughness: ';
+            if (material.roughness !== undefined) {
+                roughnessText += material.roughness.toFixed(3);
+                if (material.roughnessMap) {
+                    roughnessText += ' (+ map)';
+                }
+            } else {
+                roughnessText += 'Default';
+            }
+            document.getElementById('propRoughness').textContent = roughnessText;
+            
+            // Metalness
+            let metalnessText = 'Metalness: ';
+            if (material.metalness !== undefined) {
+                metalnessText += material.metalness.toFixed(3);
+                if (material.metalnessMap) {
+                    metalnessText += ' (+ map)';
+                }
+            } else {
+                metalnessText += 'Default';
+            }
+            document.getElementById('propMetalness').textContent = metalnessText;
+            
+            // Emissive
+            let emissiveText = 'Emissive: ';
+            if (material.emissive && (material.emissive.r > 0 || material.emissive.g > 0 || material.emissive.b > 0)) {
+                const hex = '#' + material.emissive.getHexString().toUpperCase();
+                const intensity = material.emissiveIntensity !== undefined ? ` (${material.emissiveIntensity.toFixed(2)})` : '';
+                emissiveText += `${hex}${intensity}`;
+                if (material.emissiveMap) {
+                    emissiveText += ` + ${getTextureFileName(material.emissiveMap)}`;
+                }
+            } else {
+                emissiveText += 'None';
+            }
+            document.getElementById('propEmissive').textContent = emissiveText;
+        }
+        
+        function getTextureFileName(texture) {
+            if (!texture || !texture.image || !texture.image.src) return 'Unknown';
+            const src = texture.image.src;
+            const filename = src.substring(src.lastIndexOf('/') + 1);
+            return filename || 'Unknown';
+        }
+
+        function focusOnObject(object) {
+            if (!object || isAnimatingCamera) return;
+            
+            // Calculate object's bounding box
+            const box = new THREE.Box3().setFromObject(object);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            
+            // Calculate optimal camera distance based on object size
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = camera.fov * (Math.PI / 180);
+            let distance = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+            
+            // Add padding factor for better framing
+            distance *= 2.5;
+            
+            // Calculate camera position offset from the object center
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            direction.negate(); // Get direction from target to camera
+            
+            // If direction is too flat, add some vertical angle
+            if (Math.abs(direction.y) < 0.3) {
+                direction.y = 0.5;
+                direction.normalize();
+            }
+            
+            const targetCameraPosition = center.clone().add(direction.multiplyScalar(distance));
+            
+            // Store current values
+            const startPosition = camera.position.clone();
+            const startTarget = controls.target.clone();
+            
+            // Set target values
+            const endPosition = targetCameraPosition;
+            const endTarget = center;
+            
+            // Set focused object
+            focusedObject = object;
+            
+            // Animate camera
+            animateCamera(startPosition, endPosition, startTarget, endTarget);
+        }
+
+        function animateCamera(startPos, endPos, startTarget, endTarget, duration = 1500) {
+            if (isAnimatingCamera) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            isAnimatingCamera = true;
+            const startTime = performance.now();
+            
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Use easing function for smooth animation
+                const easeInOutCubic = progress < 0.5 
+                    ? 4 * progress * progress * progress 
+                    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+                
+                // Interpolate camera position
+                camera.position.lerpVectors(startPos, endPos, easeInOutCubic);
+                
+                // Interpolate camera target
+                controls.target.lerpVectors(startTarget, endTarget, easeInOutCubic);
+                
+                // Update controls
+                controls.update();
+                
+                if (progress < 1) {
+                    animationId = requestAnimationFrame(animate);
+                } else {
+                    isAnimatingCamera = false;
+                    animationId = null;
+                    
+                    // Final update to ensure exact positioning
+                    camera.position.copy(endPos);
+                    controls.target.copy(endTarget);
+                    controls.update();
+                    
+                    console.log('Camera animation completed');
+                }
+            }
+            
+            animate(startTime);
+        }
+
+        function onMouseDoubleClick(event) {
+            if (isAnimatingCamera) return;
+            
+            // Reset camera to original position
+            resetCamera();
+        }
+
+        function resetCamera() {
+            if (isAnimatingCamera) return;
+            
+            const startPosition = camera.position.clone();
+            const startTarget = controls.target.clone();
+            
+            focusedObject = null;
+            
+            // Animate back to original position
+            animateCamera(startPosition, originalCameraPosition, startTarget, originalCameraTarget);
+            
+            console.log('Resetting camera to original position');
+            document.getElementById('status').textContent = 'Camera reset to original view';
+        }
+
+        function initializeObjectMenu() {
+            // Toggle menu visibility
+            document.getElementById('menuToggle').addEventListener('click', function() {
+                const menu = document.getElementById('objectMenu');
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+            });
+            
+            // Setup bloom control sliders
+            setupBloomControls();
+        }
+        
+        function setupBloomControls() {
+            const strengthSlider = document.getElementById('bloomStrengthSlider');
+            const radiusSlider = document.getElementById('bloomRadiusSlider');
+            const thresholdSlider = document.getElementById('bloomThresholdSlider');
+            
+            const strengthValue = document.getElementById('bloomStrengthValue');
+            const radiusValue = document.getElementById('bloomRadiusValue');
+            const thresholdValue = document.getElementById('bloomThresholdValue');
+            
+            strengthSlider.addEventListener('input', function() {
+                bloomStrength = parseFloat(this.value);
+                strengthValue.textContent = bloomStrength.toFixed(1);
+                updateBloomParameters();
+            });
+            
+            radiusSlider.addEventListener('input', function() {
+                bloomRadius = parseFloat(this.value);
+                radiusValue.textContent = bloomRadius.toFixed(1);
+                updateBloomParameters();
+            });
+            
+            thresholdSlider.addEventListener('input', function() {
+                bloomThreshold = parseFloat(this.value);
+                thresholdValue.textContent = bloomThreshold.toFixed(2);
+                updateBloomParameters();
+            });
+        }
+        
+        function updateBloomParameters() {
+            if (window.currentBloomPass) {
+                window.currentBloomPass.strength = bloomStrength;
+                window.currentBloomPass.radius = bloomRadius;
+                window.currentBloomPass.threshold = bloomThreshold;
+                console.log('Updated bloom parameters:', {
+                    strength: bloomStrength,
+                    radius: bloomRadius,
+                    threshold: bloomThreshold
+                });
+            }
+        }
+
+        function populateObjectMenu() {
+            if (!photoboothModel) return;
+            
+            const objectList = document.getElementById('objectList');
+            objectList.innerHTML = '';
+            
+            // Collect all mesh objects
+            const meshObjects = [];
+            photoboothModel.traverse(function(child) {
+                if (child.isMesh) {
+                    meshObjects.push(child);
+                    
+                    // Initialize states
+                    sceneObjects.set(child.uuid, {
+                        mesh: child,
+                        name: child.name || 'Unnamed Object',
+                        materialName: child.material.name || 'Unnamed Material',
+                        originalMaterial: child.material.clone()
+                    });
+                    objectVisibility.set(child.uuid, true);
+                    objectMaterialEnabled.set(child.uuid, true);
+                }
+            });
+            
+            console.log('Found', meshObjects.length, 'mesh objects');
+            
+            // Group objects by type for better organization
+            const objectGroups = {
+                'CAMERA': [],
+                'PHOTOBOOTH': [],
+                'STOP': [],
+                'CONE': [],
+                'SCREEN': [],
+                'WALL': [],
+                'CHAIR': [],
+                'CESTINO': [],
+                'OTHER': []
+            };
+            
+            meshObjects.forEach(mesh => {
+                const name = mesh.name.toLowerCase();
+                let category = 'OTHER';
+                
+                if (name.includes('camera')) category = 'CAMERA';
+                else if (name.includes('photobooth') || name.includes('ventola')) category = 'PHOTOBOOTH';
+                else if (name.includes('stop')) category = 'STOP';
+                else if (name.includes('cone')) category = 'CONE';
+                else if (name.includes('screen')) category = 'SCREEN';
+                else if (name.includes('wall')) category = 'WALL';
+                else if (name.includes('chair')) category = 'CHAIR';
+                else if (name.includes('cestino')) category = 'CESTINO';
+                
+                objectGroups[category].push(mesh);
+            });
+            
+            // Create UI for each group
+            Object.keys(objectGroups).forEach(groupName => {
+                const objects = objectGroups[groupName];
+                if (objects.length === 0) return;
+                
+                // Create group header
+                const groupHeader = document.createElement('div');
+                groupHeader.style.cssText = 'font-weight: bold; color: #00ff88; margin: 15px 0 8px 0; font-size: 14px; border-bottom: 1px solid #444; padding-bottom: 3px;';
+                groupHeader.textContent = `${groupName} (${objects.length})`;
+                objectList.appendChild(groupHeader);
+                
+                // Create controls for each object in the group
+                objects.forEach(mesh => {
+                    createObjectControl(mesh, objectList);
+                });
+            });
+        }
+
+        function createObjectControl(mesh, container) {
+            const objectDiv = document.createElement('div');
+            objectDiv.className = 'object-item';
+            
+            const objectName = document.createElement('div');
+            objectName.className = 'object-name';
+            objectName.textContent = mesh.name || 'Unnamed Object';
+            
+            const objectInfo = document.createElement('div');
+            objectInfo.className = 'object-info';
+            objectInfo.textContent = `Material: ${mesh.material.name || 'Unnamed'}`;
+            
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'object-controls';
+            
+            // Visibility toggle button
+            const visibilityBtn = document.createElement('button');
+            visibilityBtn.className = 'toggle-button visibility-btn';
+            visibilityBtn.textContent = 'VISIBLE';
+            visibilityBtn.addEventListener('click', () => toggleObjectVisibility(mesh, visibilityBtn));
+            
+            // Material toggle button
+            const materialBtn = document.createElement('button');
+            materialBtn.className = 'toggle-button material-btn';
+            materialBtn.textContent = 'MATERIAL';
+            materialBtn.addEventListener('click', () => toggleObjectMaterial(mesh, materialBtn));
+            
+            controlsDiv.appendChild(visibilityBtn);
+            controlsDiv.appendChild(materialBtn);
+            
+            objectDiv.appendChild(objectName);
+            objectDiv.appendChild(objectInfo);
+            objectDiv.appendChild(controlsDiv);
+            
+            container.appendChild(objectDiv);
+        }
+
+        function toggleObjectVisibility(mesh, button) {
+            const isVisible = objectVisibility.get(mesh.uuid);
+            const newVisibility = !isVisible;
+            
+            mesh.visible = newVisibility;
+            objectVisibility.set(mesh.uuid, newVisibility);
+            
+            button.textContent = newVisibility ? 'VISIBLE' : 'HIDDEN';
+            button.className = newVisibility ? 'toggle-button visibility-btn' : 'toggle-button visibility-btn hidden';
+            
+            console.log(`${mesh.name || 'Unnamed'} visibility:`, newVisibility);
+        }
+
+        function toggleObjectMaterial(mesh, button) {
+            const materialEnabled = objectMaterialEnabled.get(mesh.uuid);
+            const newMaterialState = !materialEnabled;
+            
+            if (newMaterialState) {
+                // Restore original textured material
+                const objectInfo = sceneObjects.get(mesh.uuid);
+                if (objectInfo && objectInfo.originalMaterial) {
+                    mesh.material = objectInfo.originalMaterial.clone();
+                }
+            } else {
+                // Apply basic colored material
+                const basicMaterial = new THREE.MeshBasicMaterial({
+                    color: getObjectTypeColor(mesh.name),
+                    transparent: true,
+                    opacity: 0.7
+                });
+                mesh.material = basicMaterial;
+            }
+            
+            mesh.material.needsUpdate = true;
+            objectMaterialEnabled.set(mesh.uuid, newMaterialState);
+            
+            button.textContent = newMaterialState ? 'MATERIAL' : 'BASIC';
+            button.className = newMaterialState ? 'toggle-button material-btn' : 'toggle-button material-btn disabled';
+            
+            console.log(`${mesh.name || 'Unnamed'} material enabled:`, newMaterialState);
+        }
+
+        function getObjectTypeColor(objectName) {
+            const name = objectName.toLowerCase();
+            if (name.includes('camera')) return 0xff0000; // Red
+            if (name.includes('photobooth') || name.includes('ventola')) return 0x00ff00; // Green
+            if (name.includes('stop')) return 0xffff00; // Yellow
+            if (name.includes('cone')) return 0x8a2be2; // Purple
+            if (name.includes('screen')) return 0xffff00; // Yellow
+            if (name.includes('wall')) return 0xff00ff; // Magenta
+            if (name.includes('chair')) return 0x00ffff; // Cyan
+            if (name.includes('cestino')) return 0xffa500; // Orange
+            return 0x888888; // Gray for unknown
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Update post-processing composers
+            if (bloomComposer && finalComposer) {
+                bloomComposer.setSize(window.innerWidth, window.innerHeight);
+                finalComposer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            controls.update();
+            
+            // Update bloom objects (no synchronization needed since using same objects)
+            bloomObjects.forEach(obj => {
+                if (obj.original) {
+                    obj.original.updateMatrixWorld(true);
+                }
+            });
+            
+            // Render with selective bloom effect
+            if (bloomComposer && finalComposer && bloomObjects.length > 0) {
+                // Debug: Log rendering attempt occasionally
+                if (Math.random() < 0.001) {
+                    console.log('Rendering bloom frame:', {
+                        bloomObjects: bloomObjects.length,
+                        pcube4Material: bloomObjects[0]?.original?.material ? {
+                            emissive: bloomObjects[0].original.material.emissive.getHexString(),
+                            emissiveIntensity: bloomObjects[0].original.material.emissiveIntensity
+                        } : 'none'
+                    });
+                }
+                
+                // Step 1: Render scene for bloom objects only
+                // Hide all non-bloom objects temporarily
+                const hiddenObjects = [];
+                scene.traverse((child) => {
+                    if (child.isMesh && !bloomObjects.some(b => b.original === child)) {
+                        if (child.visible) {
+                            child.visible = false;
+                            hiddenObjects.push(child);
+                        }
+                    }
+                });
+                
+                // Render bloom pass
+                bloomComposer.render();
+                
+                // Restore hidden objects
+                hiddenObjects.forEach(child => {
+                    child.visible = true;
+                });
+                
+                // Step 2: Render final composite (normal scene + bloom)
+                finalComposer.render();
+            } else {
+                // Fallback to normal rendering when no bloom objects
+                renderer.render(scene, camera);
+            }
+        }
+
+        // Initialize the scene
+        init();
+        animate();
+    </script>
+</body>
+</html>
