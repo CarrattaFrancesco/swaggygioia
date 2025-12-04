@@ -604,47 +604,108 @@
             const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
             scene.add(ambientLight);
 
+            // point light inside the photobooth to illuminate interior
+            const pointLight = new THREE.PointLight(0xffffff, 3.0, 10);
+            pointLight.position.set(0, 0.1, 0);
+            // Enable shadows for the point light
+            pointLight.castShadow = true;
+            pointLight.shadow.mapSize.width = 1024;
+            pointLight.shadow.mapSize.height = 1024;
+            pointLight.shadow.camera.near = 0.1;
+            pointLight.shadow.camera.far = 5; // Match your light distance
+            
+            scene.add(pointLight);
+
+            // point light purple outside the photobooth to illuminate exterior
+            const pointLight_purple_1 = new THREE.PointLight(0x6a4c93, 1.0, 10);
+            pointLight_purple_1.position.set(-0.4, 0.4, 0.4);
+            // Enable shadows for the point light
+            pointLight_purple_1.castShadow = true;
+            pointLight_purple_1.shadow.mapSize.width = 1024;
+            pointLight_purple_1.shadow.mapSize.height = 1024;
+            pointLight_purple_1.shadow.camera.near = 0.1;
+            pointLight_purple_1.shadow.camera.far = 5; // Match your light distance
+            
+            scene.add(pointLight_purple_1);
+
+
+            // Blue point light (corner 2)
+            const pointLight_blue = new THREE.PointLight(0x4a90e2, 1.0, 10);
+            pointLight_blue.position.set(0.4, 0.4, 0.4);
+            pointLight_blue.castShadow = true;
+            pointLight_blue.shadow.mapSize.width = 1024;
+            pointLight_blue.shadow.mapSize.height = 1024;
+            pointLight_blue.shadow.camera.near = 0.1;
+            pointLight_blue.shadow.camera.far = 5;
+            
+            scene.add(pointLight_blue);
+
+
+            // Light blue point light (corner 3)
+            const pointLight_lightBlue = new THREE.PointLight(0x7fb3d3, 1.0, 10);
+            pointLight_lightBlue.position.set(0.4, 0.4, -0.4);
+            pointLight_lightBlue.castShadow = true;
+            pointLight_lightBlue.shadow.mapSize.width = 1024;
+            pointLight_lightBlue.shadow.mapSize.height = 1024;
+            pointLight_lightBlue.shadow.camera.near = 0.1;
+            pointLight_lightBlue.shadow.camera.far = 5;
+            
+            scene.add(pointLight_lightBlue);
+
+
+            // Warm yellow lamp light (corner 4)
+            const pointLight_violet = new THREE.PointLight(0xffd54f, 0.5, 10);
+            pointLight_violet.position.set(-0.4, 0.4, -0.4);
+            pointLight_violet.castShadow = true;
+            pointLight_violet.shadow.mapSize.width = 1024;
+            pointLight_violet.shadow.mapSize.height = 1024;
+            pointLight_violet.shadow.camera.near = 0.1;
+            pointLight_violet.shadow.camera.far = 5;
+            
+            scene.add(pointLight_violet);
+
+
             // Main directional light (key light)
-            const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
-            mainLight.position.set(10, 10, 5);
-            mainLight.castShadow = true;
-            mainLight.shadow.mapSize.width = 2048;
-            mainLight.shadow.mapSize.height = 2048;
-            mainLight.shadow.camera.near = 0.5;
-            mainLight.shadow.camera.far = 50;
-            mainLight.shadow.camera.left = -10;
-            mainLight.shadow.camera.right = 10;
-            mainLight.shadow.camera.top = 10;
-            mainLight.shadow.camera.bottom = -10;
-            scene.add(mainLight);
+            // const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            // mainLight.position.set(10, 10, 5);
+            // mainLight.castShadow = true;
+            // mainLight.shadow.mapSize.width = 2048;
+            // mainLight.shadow.mapSize.height = 2048;
+            // mainLight.shadow.camera.near = 0.5;
+            // mainLight.shadow.camera.far = 50;
+            // mainLight.shadow.camera.left = -10;
+            // mainLight.shadow.camera.right = 10;
+            // mainLight.shadow.camera.top = 10;
+            // mainLight.shadow.camera.bottom = -10;
+            // scene.add(mainLight);
 
             // Fill light
-            const fillLight = new THREE.DirectionalLight(0x8bb7f0, 0.7);
-            fillLight.position.set(-5, 5, 2);
-            scene.add(fillLight);
+            //const fillLight = new THREE.DirectionalLight(0x8bb7f0, 0.7);
+            //fillLight.position.set(-5, 5, 2);
+            //scene.add(fillLight);
 
             // Back light
-            const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
-            backLight.position.set(-5, 3, -5);
-            scene.add(backLight);
-
-            // Point lights for more dramatic lighting
-            const pointLight1 = new THREE.PointLight(0xffffff, 1.0, 15);
-            pointLight1.position.set(3, 4, 3);
-            scene.add(pointLight1);
-
-            const pointLight2 = new THREE.PointLight(0x88ccff, 0.8, 12);
-            pointLight2.position.set(-3, 3, -2);
-            scene.add(pointLight2);
-            
-            // Add additional point lights for metallic reflections
-            const metalLight1 = new THREE.PointLight(0xffffff, 0.6, 10);
-            metalLight1.position.set(0, 8, 0);
-            scene.add(metalLight1);
-            
-            const metalLight2 = new THREE.PointLight(0xaaccff, 0.4, 8);
-            metalLight2.position.set(-8, 2, 8);
-            scene.add(metalLight2);
+            // const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            // backLight.position.set(-5, 3, -5);
+            // scene.add(backLight);
+// 
+            // // Point lights for more dramatic lighting
+            // const pointLight1 = new THREE.PointLight(0xffffff, 1.0, 15);
+            // pointLight1.position.set(3, 4, 3);
+            // scene.add(pointLight1);
+// 
+            // const pointLight2 = new THREE.PointLight(0x88ccff, 0.8, 12);
+            // pointLight2.position.set(-3, 3, -2);
+            // scene.add(pointLight2);
+            // 
+            // // Add additional point lights for metallic reflections
+            // const metalLight1 = new THREE.PointLight(0xffffff, 0.6, 10);
+            // metalLight1.position.set(0, 8, 0);
+            // scene.add(metalLight1);
+            // 
+            // const metalLight2 = new THREE.PointLight(0xaaccff, 0.4, 8);
+            // metalLight2.position.set(-8, 2, 8);
+            // scene.add(metalLight2);
         }
         
         function loadEnvironmentMap() {
@@ -652,21 +713,23 @@
             const loader = new THREE.RGBELoader();
             
             // If HDR file exists, use it
-            loader.load('data/models/shanghai_bund_4k.hdr', 
-                function(texture) {
-                    texture.mapping = THREE.EquirectangularReflectionMapping;
-                    scene.environment = texture;
-                    console.log('HDR environment map loaded successfully');
-                },
-                function(progress) {
-                    console.log('Loading HDR environment:', (progress.loaded / progress.total * 100) + '%');
-                },
-                function(error) {
-                    console.warn('HDR environment map not found, using fallback lighting');
-                    // Fallback: create a simple environment using cube camera
-                    createFallbackEnvironment();
-                }
-            );
+            if (false) {
+                loader.load('data/models/shanghai_bund_4k.hdr', 
+                    function(texture) {
+                        texture.mapping = THREE.EquirectangularReflectionMapping;
+                        scene.environment = texture;
+                        console.log('HDR environment map loaded successfully');
+                    },
+                    function(progress) {
+                        console.log('Loading HDR environment:', (progress.loaded / progress.total * 100) + '%');
+                    },
+                    function(error) {
+                        console.warn('HDR environment map not found, using fallback lighting');
+                        // Fallback: create a simple environment using cube camera
+                        createFallbackEnvironment();
+                    }
+                );
+            }
         }
         
         function createFallbackEnvironment() {
