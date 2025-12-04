@@ -1,0 +1,1110 @@
+// Scene setup
+let scene, camera, renderer, controls;
+let photoboothModel;
+let bloomComposer, finalComposer;
+
+// Mouse interaction variables
+let raycaster, mouse;
+let hoveredObject = null;
+let originalMaterials = new Map();
+
+// Object management variables
+let bloomObjects = [];
+
+// Bloom control parameters
+let bloomStrength = 2.5;
+let bloomRadius = 1.0;
+let bloomThreshold = 0.2;
+
+// Camera animation variables
+let isAnimatingCamera = false;
+let animationId = null;
+let focusedObject = null;
+let originalCameraPosition = new THREE.Vector3();
+let originalCameraTarget = new THREE.Vector3();
+
+// Video textures storage
+let videoTextures = [];
+
+// Texture paths mapping (make it global for preloading)
+window.texturePaths = {
+    "stop": {
+        "stop1": {
+            baseColor: 'PHOTOBOOTH_1/TXT/STOP/STOP_standardSurface50SG_BaseColor.1001.png',
+            roughness: 0.8,
+            metalness: 0.1,
+        },
+        "stop1003": {
+            baseColor: 'PHOTOBOOTH_1/TXT/STOP/STOP_standardSurface7SG_BaseColor.1001.png',
+            roughness: 0.8,
+            metalness: 0.1
+        },
+        "stop1004": {
+            baseColor: '#2C2B2B',
+            roughness: 0.8,
+            metalness: 0.1
+        }
+    },
+    "cone":{
+        "cameracone":{
+            baseColor:"PHOTOBOOTH_1/TXT/CONE/CONE_camera_standardSurface5SG_BaseColor.1001.png",
+            orm: "PHOTOBOOTH_1/TXT/CONE/CONE_camera_standardSurface5SG_OcclusionRoughnessMetallic.1001.png",
+            roughness: 0.8,
+            metalness: 0.1
+        },
+        "cameracone001":{
+            baseColor:"PHOTOBOOTH_1/TXT/CONE/CONE_camera_standardSurface6SG_BaseColor.1001.png",
+            orm: "PHOTOBOOTH_1/TXT/CONE/CONE_camera_standardSurface6SG_OcclusionRoughnessMetallic.1001.png",
+            roughness: 0.8,
+            metalness: 0.1
+        }
+    },
+    "cameratrash":{
+        "cameratrash":{
+            baseColor:"PHOTOBOOTH_1/TXT/CESTINO/CESTINO_BaseColor_0.png",
+            metalness: 0.8,
+            roughness: 0.3
+        }
+    },
+    "cameracamera":{
+        "cameracamera":{
+            baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_Camera_rough_0.png",
+            normalMap:"PHOTOBOOTH_1/TXT/CAMERA/camera_Camera_normal.png",
+            roughness: 0,
+            metalness: 1
+        },
+        "cameracamera001":{
+            baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_001.png",
+            roughness: 1,
+            metalness: 0
+        },
+        "cameracamera002":{
+            baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_002.png",
+            roughness: 1,
+            metalness: 0
+        },
+        "cameracamera003":{
+            roughness: 0,
+            metalness: 1
+        },
+        "cameracamera004":{
+            baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_004_rough_a_0.png",
+            roughness: 0,
+            metalness: 1
+        },
+        "cameracamera005":{
+            baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_005_rough_a_0.png",
+            roughness: 0,
+            metalness: 1
+        },
+        "cameracamera006":{
+            baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_006.png",
+            roughness: 1,
+            metalness: 0
+        },
+         "cameracamera007":{
+            baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_007_schermo.png",
+            roughness: 1,
+            metalness: 0,
+            emissionColor: "#00ff88"
+        },
+        "cameracamera008":{
+            baseColor:"PHOTOBOOTH_1/TXT/CAMERA/camera_008.png",
+            roughness: 1,
+            metalness: 0
+        },
+         "cameracamera009":{
+            baseColor:"PHOTOBOOTH_1/TXT/CAMERA/CAMERA_BaseColor.png",
+            roughness: 0.5,
+            metalness: 0.8,
+            emissionColor: "#0088ff"
+        },
+    },
+    "chair001":{
+        "chair001":{
+            baseColor:"PHOTOBOOTH_1/TXT/CHAIR/CHAIR_standardSurface10SG_BaseColor.1001.png",
+            roughness: 0.7,
+            metalness: 0
+        }
+    },
+    "wallpcube19":{
+        "wallpcube19":{
+            baseColor:"PHOTOBOOTH_1/TXT/WALL/WALL_initialShadingGroup_BaseColor.1001.png",
+            normalMap:"PHOTOBOOTH_1/TXT/WALL/WALL_initialShadingGroup_Normal.1001.png",
+            orm:"PHOTOBOOTH_1/TXT/WALL/WALL_initialShadingGroup_OcclusionRoughnessMetallic.1001.png",
+            metalness: 0.0
+        }
+    },
+    "pcube16":{
+        "pcube16":{
+            baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_DOWN_standardSurface39SG_BaseColor.1001.png",
+            normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_DOWN_standardSurface39SG_Normal.1001.png",
+            orm:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_DOWN_standardSurface39SG_Roughness.1001.png",
+            metalness: 0.0
+        }
+    },
+    "pcube7":{
+        "pcube7":{
+            baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_UP_standardSurface38SG_BaseColor.1001.png",
+            normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_UP_standardSurface38SG_Normal.1001.png",
+            orm:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/FLOOR_UP_standardSurface38SG_Roughness.1001.png",
+            metalness: 0.0
+        }
+    },
+    "pcube19":{
+        "pcube19":{
+            baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/PHOTOBOOTH_standardSurface51SG_BaseColor.1001.png",
+            normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/PHOTOBOOTH_standardSurface51SG_Normal.1001.png",
+            orm:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/PHOTOBOOTH_standardSurface51SG_OcclusionRoughnessMetallic.1001.png",
+            metalness: 0.0
+        }
+    },
+    "pcube2":{
+        "pcube2":{
+            baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/ROOF_standardSurface42SG_BaseColor.1001.png",
+            normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/ROOF_standardSurface42SG_Normal.1001.png",
+            orm:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/ROOF_standardSurface42SG_Roughness.1001.png",
+            metalness: 0.0
+        }
+    },
+    "pcube5":{
+        "pcube5":{
+            baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/AIR_DUCT_standardSurface43SG_BaseColor.1001.png",
+            normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/AIR_DUCT_standardSurface43SG_Normal.1001.png",
+            orm:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/AIR_DUCT_standardSurface43SG_OcclusionRoughnessMetallic.1001.png",
+            metalness: 0.0
+        }
+    },
+    "sweep2":{
+        "sweep2":{
+            baseColor:"PHOTOBOOTH_1/TXT/SWEEP/sweep.png",
+        }
+    },
+    "pcube4":{
+        "pcube4":{
+            baseColor: "#2F2BA9",
+            roughness: 0,
+            metalness: 0,
+            emissionColor: "#2F2BA9"
+        },
+        "pcube4001":{
+            baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/SCREEN_OUT_standardSurface45SG_BaseColor.1001.png",
+            normalMap:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/SCREEN_OUT_standardSurface45SG_Normal.1001.png",
+            metalness: 0.1
+        }
+    }, 
+    "pcube6":{
+        "pcube6":{
+            baseColor: "#ffffff",
+            roughness: 0,
+            metalness: 0,
+            emissionColor: "#ffffff"
+        },
+        "pcube6001":{
+            baseColor: "#000000",
+            roughness: 0.1,
+            metalness: 0.1,
+            emissionColor: null
+        }
+    },
+    "floor_sign":{
+        "floor_sign":{
+            baseColor:"PHOTOBOOTH_1/TXT/FLOOR/FLOOR_SIGN_camera_standardSurface3SG_BaseColor.1001.png",
+            normalMap:"PHOTOBOOTH_1/TXT/FLOOR/FLOOR_SIGN_camera_standardSurface3SG_Normal.1001.png",
+            orm:"PHOTOBOOTH_1/TXT/FLOOR/FLOOR_SIGN_camera_standardSurface3SG_OcclusionRoughnessMetallic.1001.png",
+            metalness: 0.8,
+            roughness: 0.3
+        }
+    },
+    "sprayspray":{
+        "sprayspray2":{
+            baseColor:"PHOTOBOOTH_1/TXT/SPRAY/SPRAY_2.png",
+            metalness: 0.8,
+            roughness: 0.3
+        },
+        "sprayspray2001":{
+            baseColor:"PHOTOBOOTH_1/TXT/SPRAY/SPRAY2_001.png",
+            metalness: 0.8,
+            roughness: 0.3
+        },
+        "sprayspray2002":{
+            baseColor:"#ffffff",
+            metalness: 0.8,
+            roughness: 0.3
+        },
+        "sprayspray2003":{
+            baseColor:"PHOTOBOOTH_1/TXT/SPRAY/SORAY2_003.png",
+            metalness: 0.8,
+            roughness: 0.3
+        },
+    },
+    "curtain":{
+        "curtain_back":{
+            baseColor:"PHOTOBOOTH_1/TXT/CURTAIN/CURTAIN_standardSurface13SG_BaseColor.1001.png",
+            roughness: 0.7,
+            metalness: 0
+        },
+        "curtain_front":{
+            baseColor:"PHOTOBOOTH_1/TXT/CURTAIN/CURTAIN_standardSurface13SG_BaseColor.1001.png",
+            roughness: 0.7,
+            metalness: 0
+        }
+    },
+    "pcube18":{
+        "pcube18":{
+            baseColor:"PHOTOBOOTH_1/TXT/SCREEN/PHOTOBOOTH_standardSurface49SG_BaseColor.1001.png",
+            metalness: 0.0
+        },
+        "pcube18001":{
+            baseColor:"#ffffff",
+            metalness: 0.0
+        }
+    },
+    "pcube3": {
+        "pcube3": {
+            baseColor: "#ffffff",
+            roughness: 0.1,
+            metalness: 0.9
+        }
+    },
+    "pcylinder":{
+        "buttonpcylinder19":{
+            baseColor: "#0a4d02",
+            roughness: 0,
+            metalness: 0,
+
+        },
+        "default":{
+            baseColor: "#ffffff",
+            roughness: 0.1,
+            metalness: 0.9
+        }
+    },
+    "card":{
+        "card":{
+            videoTexture: true,
+            videoElementId: 'cardVideo',
+            roughness: 0.8,
+            metalness: 0.0,
+            emissiveIntensity: 0
+        }
+    }
+};
+
+function init() {
+    // Create scene
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+
+    // Create camera
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(2, 2, 3);
+    camera.layers.enableAll();
+
+    // Create renderer
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.8;
+    
+    document.getElementById('container').appendChild(renderer.domElement);
+
+    // Initialize raycaster and mouse
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
+
+    // Add orbit controls
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 0;
+    controls.maxDistance = Infinity;
+    controls.target.set(0, 0.5, 0);
+
+    // Add mouse event listeners
+    renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+    renderer.domElement.addEventListener('click', onMouseClick, false);
+    renderer.domElement.addEventListener('dblclick', onMouseDoubleClick, false);
+
+    // Add lights
+    setupLighting();
+
+    // Load model
+    loadPhotoboothModel();
+
+    // Handle window resize
+    window.addEventListener('resize', onWindowResize, false);
+}
+
+function setupLighting() {
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+    scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0xffffff, 3.0, 10);
+    pointLight.position.set(0, 0.1, 0);
+    pointLight.castShadow = true;
+    pointLight.shadow.mapSize.width = 1024;
+    pointLight.shadow.mapSize.height = 1024;
+    pointLight.shadow.camera.near = 0.1;
+    pointLight.shadow.camera.far = 5;
+    scene.add(pointLight);
+
+    const pointLight_purple_1 = new THREE.PointLight(0x6a4c93, 1.0, 10);
+    pointLight_purple_1.position.set(-0.4, 0.4, 0.4);
+    pointLight_purple_1.castShadow = true;
+    pointLight_purple_1.shadow.mapSize.width = 1024;
+    pointLight_purple_1.shadow.mapSize.height = 1024;
+    pointLight_purple_1.shadow.camera.near = 0.1;
+    pointLight_purple_1.shadow.camera.far = 5;
+    scene.add(pointLight_purple_1);
+
+    const pointLight_blue = new THREE.PointLight(0x4a90e2, 1.0, 10);
+    pointLight_blue.position.set(0.4, 0.4, 0.4);
+    pointLight_blue.castShadow = true;
+    pointLight_blue.shadow.mapSize.width = 1024;
+    pointLight_blue.shadow.mapSize.height = 1024;
+    pointLight_blue.shadow.camera.near = 0.1;
+    pointLight_blue.shadow.camera.far = 5;
+    scene.add(pointLight_blue);
+
+    const pointLight_lightBlue = new THREE.PointLight(0x7fb3d3, 1.0, 10);
+    pointLight_lightBlue.position.set(0.4, 0.4, -0.4);
+    pointLight_lightBlue.castShadow = true;
+    pointLight_lightBlue.shadow.mapSize.width = 1024;
+    pointLight_lightBlue.shadow.mapSize.height = 1024;
+    pointLight_lightBlue.shadow.camera.near = 0.1;
+    pointLight_lightBlue.shadow.camera.far = 5;
+    scene.add(pointLight_lightBlue);
+
+    const pointLight_violet = new THREE.PointLight(0xffd54f, 0.5, 10);
+    pointLight_violet.position.set(-0.4, 0.4, -0.4);
+    pointLight_violet.castShadow = true;
+    pointLight_violet.shadow.mapSize.width = 1024;
+    pointLight_violet.shadow.mapSize.height = 1024;
+    pointLight_violet.shadow.camera.near = 0.1;
+    pointLight_violet.shadow.camera.far = 5;
+    scene.add(pointLight_violet);
+}
+
+function loadEnvironmentMap() {
+    const loader = new THREE.RGBELoader();
+    
+    if (false) {
+        loader.load('data/models/shanghai_bund_4k.hdr', 
+            function(texture) {
+                texture.mapping = THREE.EquirectangularReflectionMapping;
+                scene.environment = texture;
+                console.log('HDR environment map loaded successfully');
+            },
+            function(progress) {
+                console.log('Loading HDR environment:', (progress.loaded / progress.total * 100) + '%');
+            },
+            function(error) {
+                console.warn('HDR environment map not found, using fallback lighting');
+                createFallbackEnvironment();
+            }
+        );
+    }
+}
+
+function createFallbackEnvironment() {
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    const renderTarget = pmremGenerator.fromScene(createEnvironmentScene());
+    scene.environment = renderTarget.texture;
+    pmremGenerator.dispose();
+    console.log('Fallback environment created');
+}
+
+function createEnvironmentScene() {
+    const envScene = new THREE.Scene();
+    const geometry = new THREE.SphereGeometry(100, 32, 16);
+    const material = new THREE.MeshBasicMaterial({
+        color: 0x87CEEB,
+        side: THREE.BackSide
+    });
+    const sphere = new THREE.Mesh(geometry, material);
+    envScene.add(sphere);
+    return envScene;
+}
+
+function setupPostProcessing() {
+    try {
+        console.log('Setting up selective bloom for objects:', bloomObjects.length);
+
+        const bloomRenderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+        const normalRenderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+
+        bloomComposer = new THREE.EffectComposer(renderer, bloomRenderTarget);
+        bloomComposer.renderToScreen = false;
+        
+        const bloomRenderPass = new THREE.RenderPass(scene, camera);
+        bloomRenderPass.clear = true;
+        
+        const bloomPass = new THREE.UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            bloomStrength,
+            bloomRadius,
+            bloomThreshold
+        );
+        
+        window.currentBloomPass = bloomPass;
+        
+        bloomComposer.addPass(bloomRenderPass);
+        bloomComposer.addPass(bloomPass);
+
+        finalComposer = new THREE.EffectComposer(renderer);
+        
+        const normalRenderPass = new THREE.RenderPass(scene, camera);
+        normalRenderPass.clear = true;
+        
+        const finalPass = new THREE.ShaderPass(
+            new THREE.ShaderMaterial({
+                uniforms: {
+                    baseTexture: { value: null },
+                    bloomTexture: { value: null }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform sampler2D baseTexture;
+                    uniform sampler2D bloomTexture;
+                    varying vec2 vUv;
+                    
+                    void main() {
+                        vec4 baseColor = texture2D(baseTexture, vUv);
+                        vec4 bloomColor = texture2D(bloomTexture, vUv);
+                        
+                        gl_FragColor = baseColor + bloomColor * 0.8;
+                    }
+                `
+            }), "baseTexture"
+        );
+        
+        finalComposer.addPass(normalRenderPass);
+        finalComposer.addPass(finalPass);
+        
+        finalPass.uniforms.bloomTexture.value = bloomComposer.renderTarget2.texture;
+        
+        console.log('✓ Selective bloom setup complete');
+    } catch (error) {
+        console.error('Error setting up post-processing:', error);
+    }
+}
+
+// Loading manager to track all assets
+const loadingManager = new THREE.LoadingManager();
+let texturesLoaded = 0;
+let totalTextures = 0;
+let modelLoadProgress = 0;
+
+loadingManager.onProgress = function(url, itemsLoaded, itemsTotal) {
+    const progress = (itemsLoaded / itemsTotal) * 100;
+    updateLoadingProgress(progress);
+};
+
+// Preload all textures in parallel
+function preloadTextures() {
+    return new Promise((resolve) => {
+        const textureLoader = new THREE.TextureLoader(loadingManager);
+        const texturePromises = [];
+        const loadedTexturesCache = new Map();
+        
+        // Collect all unique texture paths
+        const texturePaths = new Set();
+        
+        for (const objectType in window.texturePaths) {
+            const objectConfig = window.texturePaths[objectType];
+            for (const variant in objectConfig) {
+                const config = objectConfig[variant];
+                if (config.baseColor && !config.baseColor.startsWith('#')) {
+                    texturePaths.add(config.baseColor);
+                }
+                if (config.normalMap) texturePaths.add(config.normalMap);
+                if (config.orm) texturePaths.add(config.orm);
+                if (config.roughnessMap) texturePaths.add(config.roughnessMap);
+                if (config.metalnessMap) texturePaths.add(config.metalnessMap);
+            }
+        }
+        
+        totalTextures = texturePaths.size;
+        console.log(`Preloading ${totalTextures} textures in parallel...`);
+        
+        if (totalTextures === 0) {
+            resolve(loadedTexturesCache);
+            return;
+        }
+        
+        // Load all textures in parallel
+        texturePaths.forEach(path => {
+            const promise = new Promise((resolveTexture) => {
+                textureLoader.load(
+                    path,
+                    function(texture) {
+                        texture.wrapS = THREE.RepeatWrapping;
+                        texture.wrapT = THREE.RepeatWrapping;
+                        texture.encoding = THREE.sRGBEncoding;
+                        texture.flipY = false;
+                        
+                        loadedTexturesCache.set(path, texture);
+                        texturesLoaded++;
+                        
+                        const textureProgress = (texturesLoaded / totalTextures) * 30; // 0-30% for textures
+                        updateLoadingProgress(textureProgress);
+                        
+                        resolveTexture(texture);
+                    },
+                    undefined,
+                    function(error) {
+                        console.warn(`Failed to load texture: ${path}`, error);
+                        texturesLoaded++;
+                        resolveTexture(null);
+                    }
+                );
+            });
+            texturePromises.push(promise);
+        });
+        
+        // Wait for all textures to load
+        Promise.all(texturePromises).then(() => {
+            console.log(`✓ All ${totalTextures} textures preloaded`);
+            resolve(loadedTexturesCache);
+        });
+    });
+}
+
+function loadPhotoboothModel() {
+    updateLoadingProgress(0);
+    
+    // First, preload all textures in parallel
+    preloadTextures().then((textureCache) => {
+        updateLoadingProgress(35);
+        
+        // Store texture cache globally for applyTextures function
+        window.preloadedTextures = textureCache;
+        
+        // Now load the model
+        const loader = new THREE.GLTFLoader();
+        
+        loader.load('PHOTOBOOTH_1/phb.glb', 
+            function(gltf) {
+                updateLoadingProgress(65);
+                
+                photoboothModel = gltf.scene;
+                
+                updateLoadingProgress(70);
+                applyTextures(photoboothModel);
+                
+                updateLoadingProgress(80);
+                photoboothModel.traverse(function(child) {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        originalMaterials.set(child, child.material.clone());
+                    }
+                });
+                
+                photoboothModel.scale.setScalar(2);
+                photoboothModel.position.set(0, 0, 0);
+                
+                scene.add(photoboothModel);
+                
+                updateLoadingProgress(90, 'Positioning camera...');
+                const box = new THREE.Box3().setFromObject(photoboothModel);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                
+                controls.target.copy(center);
+                controls.update();
+                
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                cameraZ *= 1.5;
+                
+                camera.position.set(center.x + cameraZ, center.y + cameraZ * 0.5, center.z + cameraZ);
+                camera.lookAt(center);
+                
+                originalCameraPosition.copy(camera.position);
+                originalCameraTarget.copy(center);
+                
+                loadEnvironmentMap();
+                
+                updateLoadingProgress(95);
+                setupPostProcessing();
+                
+                updateLoadingProgress(100);
+                
+                setTimeout(() => {
+                    hideLoadingScreen();
+                }, 300);
+                
+                console.log('Photobooth model loaded:', photoboothModel);
+            },
+            function(progress) {
+                const modelProgress = 35 + (progress.loaded / progress.total * 30); // 35-65% for model
+                updateLoadingProgress(modelProgress);
+            },
+            function(error) {
+                console.error('Error loading model:', error);
+                alert('Error loading model. Please refresh the page.');
+            }
+        );
+    });
+}
+
+function applyTextures(model) {
+    // Use preloaded textures from cache
+    const loadedTextures = window.preloadedTextures || new Map();
+    
+    function loadTexture(path) {
+        // Return from cache if available (already preloaded)
+        if (loadedTextures.has(path)) {
+            return loadedTextures.get(path);
+        }
+        
+        // Fallback: load synchronously if not in cache (shouldn't happen)
+        console.warn('Texture not preloaded, loading on demand:', path);
+        const textureLoader = new THREE.TextureLoader();
+        const texture = textureLoader.load(path);
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.encoding = THREE.sRGBEncoding;
+        texture.flipY = false;
+        loadedTextures.set(path, texture);
+        return texture;
+    }
+
+    model.traverse(function(child) {
+        if (child.isMesh && child.material) {
+            const meshName = child.name.toLowerCase();
+            const materialName = child.material.name.toLowerCase();
+            
+            console.log('Processing mesh:', child.name, 'Material:', child.material.name);
+            
+            const appliedTexture = applyDynamicTextures(child, meshName, materialName, loadTexture);
+            
+            if (!appliedTexture) {
+                if (child.material.isMeshStandardMaterial) {
+                    child.material.color.setHex(0xffffff);
+                    child.material.roughness = 0.3;
+                    child.material.metalness = 0.6;
+                    child.material.map = null;
+                    child.material.needsUpdate = true;
+                } else {
+                    const newMaterial = new THREE.MeshStandardMaterial({
+                        color: 0xffffff,
+                        roughness: 0.3,
+                        metalness: 0.6
+                    });
+                    child.material = newMaterial;
+                }
+            }
+        }
+    });
+}
+
+function applyDynamicTextures(meshObject, meshName, materialName, loadTexture) {
+    for (const objectType in window.texturePaths) {
+        const objectTypeConfig = window.texturePaths[objectType];
+        
+        const isMatch = meshName.includes(objectType) || 
+                       materialName.includes(objectType) ||
+                       meshName === objectType ||
+                       materialName === objectType;
+                       
+        if (isMatch) {
+            console.log(`Found matching object type '${objectType}' for mesh:`, meshObject.name);
+            
+            let newMaterial = meshObject.material.clone();
+            
+            if (!newMaterial.isMeshStandardMaterial) {
+                const oldMaterial = newMaterial;
+                newMaterial = new THREE.MeshStandardMaterial();
+                newMaterial.color.copy(oldMaterial.color || new THREE.Color(0xffffff));
+                if (oldMaterial.map) newMaterial.map = oldMaterial.map;
+            }
+            
+            newMaterial.color = new THREE.Color(0xffffff);
+            
+            let meshConfig = null;
+            const exactMeshName = meshObject.name.toLowerCase();
+            const exactMaterialName = meshObject.material.name.toLowerCase();
+            
+            if (objectTypeConfig[exactMeshName]) {
+                meshConfig = objectTypeConfig[exactMeshName];
+            } else if (objectTypeConfig[exactMaterialName]) {
+                meshConfig = objectTypeConfig[exactMaterialName];
+            } else if (objectTypeConfig[objectType]) {
+                meshConfig = objectTypeConfig[objectType];
+            } else if (objectTypeConfig['default']) {
+                meshConfig = objectTypeConfig['default'];
+            } else {
+                const firstKey = Object.keys(objectTypeConfig)[0];
+                if (firstKey) {
+                    meshConfig = objectTypeConfig[firstKey];
+                }
+            }
+            
+            if (meshConfig) {
+                // Check if this is a video texture configuration
+                if (meshConfig.videoTexture && meshConfig.videoElementId) {
+                    const videoElement = document.getElementById(meshConfig.videoElementId);
+                    if (videoElement) {
+                        const videoTexture = new THREE.VideoTexture(videoElement);
+                        videoTexture.minFilter = THREE.LinearFilter;
+                        videoTexture.magFilter = THREE.LinearFilter;
+                        videoTexture.encoding = THREE.sRGBEncoding;
+                        
+                        newMaterial.map = videoTexture;
+                        
+                        // Store for animation loop updates
+                        videoTextures.push(videoTexture);
+                        
+                        // Auto-play the video
+                        videoElement.play().catch(err => {
+                            console.warn('Video autoplay failed, will play on user interaction:', err);
+                            // Retry on first user interaction
+                            document.addEventListener('click', () => {
+                                videoElement.play();
+                            }, { once: true });
+                        });
+                        
+                        console.log('Video texture applied to:', meshObject.name);
+                    } else {
+                        console.warn(`Video element not found: ${meshConfig.videoElementId}`);
+                    }
+                } else if (meshConfig.baseColor) {
+                    if (meshConfig.baseColor.startsWith('#')) {
+                        try {
+                            newMaterial.color = new THREE.Color(meshConfig.baseColor);
+                            newMaterial.map = null;
+                        } catch (error) {
+                            console.warn(`Failed to apply baseColor hex: ${meshConfig.baseColor}`, error);
+                        }
+                    } else {
+                        try {
+                            newMaterial.map = loadTexture(meshConfig.baseColor);
+                        } catch (error) {
+                            console.warn(`Failed to load baseColor texture: ${meshConfig.baseColor}`, error);
+                        }
+                    }
+                }
+                
+                if (meshConfig.normalMap) {
+                    try {
+                        newMaterial.normalMap = loadTexture(meshConfig.normalMap);
+                        newMaterial.normalScale = new THREE.Vector2(1, 1);
+                    } catch (error) {
+                        console.warn(`Failed to load normalMap texture: ${meshConfig.normalMap}`, error);
+                    }
+                }
+                
+                if (meshConfig.orm) {
+                    try {
+                        const ormTexture = loadTexture(meshConfig.orm);
+                        newMaterial.aoMap = ormTexture;
+                        newMaterial.roughnessMap = ormTexture;
+                        newMaterial.metalnessMap = ormTexture;
+                        newMaterial.aoMapIntensity = 1.0;
+                    } catch (error) {
+                        console.warn(`Failed to load ORM texture: ${meshConfig.orm}`, error);
+                    }
+                }
+                
+                if (typeof meshConfig.roughness === 'number') {
+                    newMaterial.roughness = meshConfig.roughness;
+                } else {
+                    newMaterial.roughness = 0.8;
+                }
+                
+                if (typeof meshConfig.metalness === 'number') {
+                    newMaterial.metalness = meshConfig.metalness;
+                } else {
+                    newMaterial.metalness = 0.1;
+                }
+                
+                const emissionColor = meshConfig.emissionColor || meshConfig.emissiveColor;
+                if (emissionColor) {
+                    newMaterial.emissive = new THREE.Color(emissionColor);
+                    const customIntensity = typeof meshConfig.emissiveIntensity === 'number' ? meshConfig.emissiveIntensity : null;
+                    setupBloomObject(meshObject, newMaterial, emissionColor, customIntensity);
+                }
+                
+                if (typeof meshConfig.emissiveIntensity === 'number') {
+                    newMaterial.emissiveIntensity = meshConfig.emissiveIntensity;
+                }
+                
+                newMaterial.needsUpdate = true;
+                meshObject.material = newMaterial;
+                
+                return true;
+            }
+            
+            break;
+        }
+    }
+    
+    return false;
+}
+
+function setupBloomObject(meshObject, material, emissionColor, customIntensity = null) {
+    try {
+        const color = new THREE.Color(emissionColor);
+        
+        material.emissive = color.clone();
+        material.emissiveIntensity = customIntensity || 1.5;
+        material.toneMapped = false;
+        material.depthTest = true;
+        material.depthWrite = true;
+        material.transparent = false;
+        meshObject.renderOrder = 0;
+        material.needsUpdate = true;
+        meshObject.userData.hasBloom = true;
+        
+        bloomObjects.push({
+            original: meshObject,
+            clone: null,
+            emissiveColor: color.clone()
+        });
+        
+        console.log(`✓ Bloom effect applied to ${meshObject.name}`);
+    } catch (error) {
+        console.error('Error setting up bloom object:', error);
+    }
+}
+
+function onMouseMove(event) {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    checkHover();
+}
+
+function checkHover() {
+    if (!photoboothModel) return;
+    
+    raycaster.setFromCamera(mouse, camera);
+    
+    const intersectableObjects = [];
+    photoboothModel.traverse(function(child) {
+        if (child.isMesh) {
+            intersectableObjects.push(child);
+        }
+    });
+    
+    const intersects = raycaster.intersectObjects(intersectableObjects);
+    
+    if (intersects.length > 0) {
+        const newHoveredObject = intersects[0].object;
+        
+        if (hoveredObject !== newHoveredObject) {
+            if (hoveredObject) {
+                restoreObjectMaterial(hoveredObject);
+            }
+            
+            hoveredObject = newHoveredObject;
+            highlightObject(hoveredObject);
+        }
+    } else {
+        if (hoveredObject) {
+            restoreObjectMaterial(hoveredObject);
+            hoveredObject = null;
+        }
+    }
+}
+
+function onMouseClick(event) {
+    if (!photoboothModel || isAnimatingCamera) return;
+    
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    
+    raycaster.setFromCamera(mouse, camera);
+    
+    const intersectableObjects = [];
+    photoboothModel.traverse(function(child) {
+        if (child.isMesh && child.visible) {
+            intersectableObjects.push(child);
+        }
+    });
+    
+    const intersects = raycaster.intersectObjects(intersectableObjects);
+    
+    if (intersects.length > 0) {
+        const clickedObject = intersects[0].object;
+        focusOnObject(clickedObject);
+    }
+}
+
+function highlightObject(object) {
+    if (!object || !object.material) return;
+    
+    const highlightMaterial = object.material.clone();
+    
+    if (highlightMaterial.emissive && (highlightMaterial.emissive.r > 0 || highlightMaterial.emissive.g > 0 || highlightMaterial.emissive.b > 0)) {
+        highlightMaterial.emissiveIntensity = (highlightMaterial.emissiveIntensity || 1.0) * 1.5;
+    } else {
+        highlightMaterial.emissive = new THREE.Color(0x444444);
+        highlightMaterial.emissiveIntensity = 0.3;
+    }
+    
+    if (highlightMaterial.color) {
+        highlightMaterial.color.multiplyScalar(1.2);
+    }
+    
+    highlightMaterial.needsUpdate = true;
+    object.material = highlightMaterial;
+}
+
+function restoreObjectMaterial(object) {
+    if (!object || !originalMaterials.has(object)) return;
+    object.material = originalMaterials.get(object).clone();
+    object.material.needsUpdate = true;
+}
+
+function focusOnObject(object) {
+    if (!object || isAnimatingCamera) return;
+    
+    const box = new THREE.Box3().setFromObject(object);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = camera.fov * (Math.PI / 180);
+    let distance = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+    distance *= 2.5;
+    
+    const direction = new THREE.Vector3();
+    camera.getWorldDirection(direction);
+    direction.negate();
+    
+    if (Math.abs(direction.y) < 0.3) {
+        direction.y = 0.5;
+        direction.normalize();
+    }
+    
+    const targetCameraPosition = center.clone().add(direction.multiplyScalar(distance));
+    
+    const startPosition = camera.position.clone();
+    const startTarget = controls.target.clone();
+    
+    const endPosition = targetCameraPosition;
+    const endTarget = center;
+    
+    focusedObject = object;
+    
+    animateCamera(startPosition, endPosition, startTarget, endTarget);
+}
+
+function animateCamera(startPos, endPos, startTarget, endTarget, duration = 1500) {
+    if (isAnimatingCamera) {
+        cancelAnimationFrame(animationId);
+    }
+    
+    isAnimatingCamera = true;
+    const startTime = performance.now();
+    
+    function animate(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const easeInOutCubic = progress < 0.5 
+            ? 4 * progress * progress * progress 
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        
+        camera.position.lerpVectors(startPos, endPos, easeInOutCubic);
+        controls.target.lerpVectors(startTarget, endTarget, easeInOutCubic);
+        controls.update();
+        
+        if (progress < 1) {
+            animationId = requestAnimationFrame(animate);
+        } else {
+            isAnimatingCamera = false;
+            animationId = null;
+            camera.position.copy(endPos);
+            controls.target.copy(endTarget);
+            controls.update();
+        }
+    }
+    
+    animate(startTime);
+}
+
+function onMouseDoubleClick(event) {
+    if (isAnimatingCamera) return;
+    resetCamera();
+}
+
+function resetCamera() {
+    if (isAnimatingCamera) return;
+    
+    const startPosition = camera.position.clone();
+    const startTarget = controls.target.clone();
+    
+    focusedObject = null;
+    
+    animateCamera(startPosition, originalCameraPosition, startTarget, originalCameraTarget);
+}
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    
+    if (bloomComposer && finalComposer) {
+        bloomComposer.setSize(window.innerWidth, window.innerHeight);
+        finalComposer.setSize(window.innerWidth, window.innerHeight);
+    }
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    
+    controls.update();
+    
+    // Update video textures
+    videoTextures.forEach(videoTexture => {
+        if (videoTexture && videoTexture.image && videoTexture.image.readyState >= videoTexture.image.HAVE_CURRENT_DATA) {
+            videoTexture.needsUpdate = true;
+        }
+    });
+    
+    bloomObjects.forEach(obj => {
+        if (obj.original) {
+            obj.original.updateMatrixWorld(true);
+        }
+    });
+    
+    if (bloomComposer && finalComposer && bloomObjects.length > 0) {
+        const hiddenObjects = [];
+        scene.traverse((child) => {
+            if (child.isMesh && !bloomObjects.some(b => b.original === child)) {
+                if (child.visible) {
+                    child.visible = false;
+                    hiddenObjects.push(child);
+                }
+            }
+        });
+        
+        bloomComposer.render();
+        
+        hiddenObjects.forEach(child => {
+            child.visible = true;
+        });
+        
+        finalComposer.render();
+    } else {
+        renderer.render(scene, camera);
+    }
+}
+
+// Initialize the scene
+init();
+animate();

@@ -4,248 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photobooth 3D</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background: #000000;
-            font-family: 'Arial', sans-serif;
-        }
-        
-        #container {
-            width: 100vw;
-            height: 100vh;
-            cursor: grab;
-            opacity: 0;
-            transition: opacity 1s ease-in-out;
-        }
-        
-        #container.loaded {
-            opacity: 1;
-        }
-        
-        #container:active {
-            cursor: grabbing;
-        }
-        
-        /* Retro 90s Loading Screen */
-        #loadingScreen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #0a0015;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
-            overflow: hidden;
-        }
-        
-        #loadingScreen::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: repeating-linear-gradient(
-                0deg,
-                rgba(0, 0, 0, 0.1) 0px,
-                rgba(0, 0, 0, 0.1) 2px,
-                transparent 2px,
-                transparent 4px
-            );
-            pointer-events: none;
-            animation: scanlines 8s linear infinite;
-        }
-        
-        @keyframes scanlines {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(4px); }
-        }
-        
-        #loadingScreen.hidden {
-            opacity: 0;
-            visibility: hidden;
-        }
-        
-        .loader-content {
-            text-align: center;
-            color: white;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .loader-title {
-            font-size: 56px;
-            font-weight: bold;
-            margin-bottom: 60px;
-            letter-spacing: 8px;
-            text-transform: uppercase;
-            color: #94ffe3;
-            text-shadow: 
-                0 0 10px #94ffe3,
-                0 0 20px #94ffe3,
-                0 0 30px #7702ef,
-                0 0 40px #7702ef;
-            font-family: 'Courier New', monospace;
-            animation: titleGlow 2s ease-in-out infinite alternate;
-        }
-        
-        @keyframes titleGlow {
-            0% { 
-                text-shadow: 
-                    0 0 10px #94ffe3,
-                    0 0 20px #94ffe3,
-                    0 0 30px #7702ef,
-                    0 0 40px #7702ef;
-            }
-            100% { 
-                text-shadow: 
-                    0 0 20px #94ffe3,
-                    0 0 30px #94ffe3,
-                    0 0 40px #7702ef,
-                    0 0 60px #7702ef,
-                    0 0 80px #7702ef;
-            }
-        }
-        
-        .loader-spinner {
-            display: none;
-        }
-        
-        .loader-text {
-            font-size: 20px;
-            margin-bottom: 40px;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            font-family: 'Courier New', monospace;
-            color: #94ffe3;
-            text-shadow: 0 0 10px #94ffe3;
-            animation: textBlink 1.5s ease-in-out infinite;
-        }
-        
-        @keyframes textBlink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        .loader-progress {
-            width: 500px;
-            height: 60px;
-            background: #000000;
-            border: 4px solid #7702ef;
-            box-shadow: 
-                0 0 20px #7702ef,
-                inset 0 0 20px rgba(119, 2, 239, 0.3);
-            margin: 20px auto;
-            overflow: hidden;
-            position: relative;
-            border-radius: 8px;
-        }
-        
-        .loader-progress::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: repeating-linear-gradient(
-                90deg,
-                transparent 0px,
-                transparent calc(14.285% - 3px),
-                #0a0015 calc(14.285% - 3px),
-                #0a0015 14.285%
-            );
-            pointer-events: none;
-            z-index: 2;
-        }
-        
-        .loader-progress-bar {
-            height: 100%;
-            background: #94ffe3;
-            width: 0%;
-            transition: width 0.3s ease;
-            box-shadow: 
-                0 0 30px #94ffe3,
-                0 0 40px #94ffe3,
-                inset 0 0 20px rgba(148, 255, 227, 0.5);
-            position: relative;
-            z-index: 1;
-        }
-        
-        .loader-percentage {
-            font-size: 32px;
-            font-weight: bold;
-            margin-top: 30px;
-            letter-spacing: 4px;
-            font-family: 'Courier New', monospace;
-            color: #7702ef;
-            text-shadow: 0 0 15px #7702ef;
-        }
-        
-        /* CRT Vignette effect */
-        #loadingScreen::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.7) 100%);
-            pointer-events: none;
-        }
-        
-        /* Floating particles effect */
-        .particles {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            pointer-events: none;
-        }
-        
-        .particle {
-            position: absolute;
-            width: 3px;
-            height: 3px;
-            background: #94ffe3;
-            box-shadow: 0 0 5px #94ffe3;
-            animation: float 15s infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% {
-                transform: translateY(0) translateX(0);
-                opacity: 0;
-            }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% {
-                transform: translateY(-100vh) translateX(100px);
-                opacity: 0;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="loading-styles.css">
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div id="loadingScreen">
-        <div class="particles" id="particles"></div>
-        <div class="loader-content">
-            <div class="loader-title">SWAGGY GIOIA ARCHIVE</div>
-            <div class="loader-spinner"></div>
-            <div class="loader-progress">
-                <div class="loader-progress-bar" id="progressBar"></div>
+    <!-- CRT Loading Screen -->
+    <div id="crt-container">
+        <div id="loadingScreen">
+            <div class="particles" id="particles"></div>
+            <div class="loader-content">
+                <div class="loader-title">SWAGGY GIOIA ARCHIVE</div>
+                <div class="loader-text" id="loadingText">ADDING A PINCH OF SWAG...</div>
+                <div class="loader-progress">
+                    <div class="loader-progress-bar" id="progressBar"></div>
+                </div>
+                <div class="loader-percentage" id="percentage">0%</div>
             </div>
-            <div class="loader-percentage" id="percentage">0%</div>
-            <div class="loader-text" id="loadingText"></div>
         </div>
     </div>
     
@@ -254,7 +28,7 @@
 
     <!-- Hidden video for card texture -->
     <video id="cardVideo" style="display: none;" loop muted playsinline crossorigin="anonymous">
-        <source src="PHOTOBOOTH_1/TXT/CARD/card_animation.mp4" type="video/mp4">
+        <source src="PHOTOBOOTH_1/TXT/CARD/card_animation.mp4" type="video/mp4">>
     </video>
 
     <!-- Three.js CDN -->
@@ -283,6 +57,57 @@
             }
         }
         createParticles();
+
+        // Random SWAG loading messages
+        const swagMessages = [
+            'ADDING A PINCH OF SWAG...',
+            'LOADING SWAGGER...',
+            'INITIALIZING COOLNESS...',
+            'CALIBRATING STYLE LEVELS...',
+            'DOWNLOADING SWAG...',
+            'RENDERING FRESHNESS...',
+            'BUFFERING ATTITUDE...',
+            'INSTALLING CONFIDENCE...',
+            'COMPILING COOLNESS...',
+            'SYNCING SWAGGER...',
+            'DEPLOYING STYLE...'
+        ];
+
+        let lastMessagePercentage = 0;
+
+        // Send loading progress
+        function updateLoadingProgress(percentage) {
+            const progressBar = document.getElementById('progressBar');
+            const percentageText = document.getElementById('percentage');
+            const loaderText = document.getElementById('loadingText');
+            
+            if (progressBar && percentageText && loaderText) {
+                progressBar.style.width = percentage + '%';
+                percentageText.textContent = Math.round(percentage) + '%';
+                
+                // Change message every 10% progress
+                const currentSegment = Math.floor(percentage / 10);
+                const lastSegment = Math.floor(lastMessagePercentage / 10);
+                
+                if (currentSegment !== lastSegment || percentage === 0) {
+                    const messageIndex = Math.floor(Math.random() * swagMessages.length);
+                    loaderText.textContent = swagMessages[messageIndex];
+                    lastMessagePercentage = percentage;
+                }
+            }
+        }
+
+        function hideLoadingScreen() {
+            const crtContainer = document.getElementById('crt-container');
+            const container = document.getElementById('container');
+            
+            if (crtContainer) {
+                crtContainer.classList.add('hidden');
+            }
+            if (container) {
+                container.classList.add('loaded');
+            }
+        }
         
         // Scene setup
         let scene, camera, renderer, controls;
@@ -555,11 +380,10 @@
             },
             "pcylinder":{
                 "buttonpcylinder19":{
-                    baseColor: "#127003",
+                    baseColor: "#0a4d02",
                     roughness: 0,
                     metalness: 0,
-                    emissionColor: "#0a4d02",
-                    emissiveIntensity: 1.0
+
                 },
                 "default":{
                     baseColor: "#ffffff",
@@ -797,52 +621,6 @@
             updateLoadingProgress(progress);
         };
 
-        // Random SWAG loading messages
-        const swagMessages = [
-            'ADDING A PINCH OF SWAG...',
-            'LOADING SWAGGER...',
-            'INITIALIZING COOLNESS...',
-            'CALIBRATING STYLE LEVELS...',
-            'DOWNLOADING SWAG...',
-            'RENDERING FRESHNESS...',
-            'BUFFERING ATTITUDE...',
-            'INSTALLING CONFIDENCE...',
-            'COMPILING COOLNESS...',
-            'SYNCING SWAGGER...',
-            'DEPLOYING STYLE...'
-        ];
-
-        let lastMessagePercentage = 0;
-
-        function updateLoadingProgress(percentage, status = '') {
-            const progressBar = document.getElementById('progressBar');
-            const percentageText = document.getElementById('percentage');
-            const loaderText = document.getElementById('loadingText');
-            
-            progressBar.style.width = percentage + '%';
-            percentageText.textContent = Math.round(percentage) + '%';
-            
-            // Change message every 10% progress
-            const currentSegment = Math.floor(percentage / 10);
-            const lastSegment = Math.floor(lastMessagePercentage / 10);
-            
-            if (currentSegment !== lastSegment || percentage === 0) {
-                const messageIndex = Math.floor(Math.random() * swagMessages.length);
-                loaderText.textContent = swagMessages[messageIndex];
-                lastMessagePercentage = percentage;
-            }
-        }
-
-        function hideLoadingScreen() {
-            const loadingScreen = document.getElementById('loadingScreen');
-            const container = document.getElementById('container');
-            
-            setTimeout(() => {
-                loadingScreen.classList.add('hidden');
-                container.classList.add('loaded');
-            }, 500);
-        }
-
         // Preload all textures in parallel
         function preloadTextures() {
             return new Promise((resolve) => {
@@ -890,7 +668,7 @@
                                 texturesLoaded++;
                                 
                                 const textureProgress = (texturesLoaded / totalTextures) * 30; // 0-30% for textures
-                                updateLoadingProgress(textureProgress, `Loading textures... ${texturesLoaded}/${totalTextures}`);
+                                updateLoadingProgress(textureProgress);
                                 
                                 resolveTexture(texture);
                             },
@@ -914,11 +692,11 @@
         }
 
         function loadPhotoboothModel() {
-            updateLoadingProgress(0, 'Preparing assets...');
+            updateLoadingProgress(0);
             
             // First, preload all textures in parallel
             preloadTextures().then((textureCache) => {
-                updateLoadingProgress(35, 'Loading 3D model...');
+                updateLoadingProgress(35);
                 
                 // Store texture cache globally for applyTextures function
                 window.preloadedTextures = textureCache;
@@ -928,14 +706,14 @@
                 
                 loader.load('PHOTOBOOTH_1/phb.glb', 
                     function(gltf) {
-                        updateLoadingProgress(65, 'Processing model...');
+                        updateLoadingProgress(65);
                         
                         photoboothModel = gltf.scene;
                         
-                        updateLoadingProgress(70, 'Applying materials...');
+                        updateLoadingProgress(70);
                         applyTextures(photoboothModel);
                         
-                        updateLoadingProgress(80, 'Setting up shadows...');
+                        updateLoadingProgress(80);
                         photoboothModel.traverse(function(child) {
                             if (child.isMesh) {
                                 child.castShadow = true;
@@ -970,10 +748,10 @@
                         
                         loadEnvironmentMap();
                         
-                        updateLoadingProgress(95, 'Setting up effects...');
+                        updateLoadingProgress(95);
                         setupPostProcessing();
                         
-                        updateLoadingProgress(100, 'Ready!');
+                        updateLoadingProgress(100);
                         
                         setTimeout(() => {
                             hideLoadingScreen();
@@ -983,12 +761,11 @@
                     },
                     function(progress) {
                         const modelProgress = 35 + (progress.loaded / progress.total * 30); // 35-65% for model
-                        updateLoadingProgress(modelProgress, 'Loading 3D model...');
+                        updateLoadingProgress(modelProgress);
                     },
                     function(error) {
                         console.error('Error loading model:', error);
-                        document.getElementById('loadingScreen').innerHTML = 
-                            '<div class="loader-content"><div class="loader-title">Error Loading Model</div><div class="loader-text">Please refresh the page</div></div>';
+                        alert('Error loading model. Please refresh the page.');
                     }
                 );
             });
