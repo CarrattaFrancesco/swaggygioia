@@ -32,12 +32,10 @@ let lastMessagePercentage = 0;
 // Update loading progress
 function updateLoadingProgress(percentage) {
     const progressBar = document.getElementById('progressBar');
-    const percentageText = document.getElementById('percentage');
     const loaderText = document.getElementById('loadingText');
     
-    if (progressBar && percentageText && loaderText) {
+    if (progressBar  && loaderText) {
         progressBar.style.width = percentage + '%';
-        percentageText.textContent = Math.round(percentage) + '%';
         
         // Change message every 10% progress
         const currentSegment = Math.floor(percentage / 10);
