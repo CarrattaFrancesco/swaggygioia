@@ -193,6 +193,11 @@
     <!-- 3D Container -->
     <div id="container"></div>
 
+    <!-- Hidden video for card texture -->
+    <video id="cardVideo" style="display: none; transform: rotate(180deg);" loop muted playsinline crossorigin="anonymous">
+        <source src="PHOTOBOOTH_1/TXT/CARD/card_animation.mp4" type="video/mp4">
+    </video>
+
     <!-- Three.js CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -244,6 +249,9 @@
         let focusedObject = null;
         let originalCameraPosition = new THREE.Vector3();
         let originalCameraTarget = new THREE.Vector3();
+        
+        // Video textures storage
+        let videoTextures = [];
         
         // Texture paths mapping (make it global for preloading)
         window.texturePaths = {
@@ -498,6 +506,15 @@
                     baseColor: "#ffffff",
                     roughness: 0.1,
                     metalness: 0.9
+                }
+            },
+            "card":{
+                "card":{
+                    videoTexture: true,
+                    videoElementId: 'cardVideo',
+                    roughness: 0.8,
+                    metalness: 0.0,
+                    emissiveIntensity: 0
                 }
             }
         };
@@ -989,7 +1006,34 @@
                     }
                     
                     if (meshConfig) {
-                        if (meshConfig.baseColor) {
+                        // Check if this is a video texture configuration
+                        if (meshConfig.videoTexture && meshConfig.videoElementId) {
+                            const videoElement = document.getElementById(meshConfig.videoElementId);
+                            if (videoElement) {
+                                const videoTexture = new THREE.VideoTexture(videoElement);
+                                videoTexture.minFilter = THREE.LinearFilter;
+                                videoTexture.magFilter = THREE.LinearFilter;
+                                videoTexture.encoding = THREE.sRGBEncoding;
+                                
+                                newMaterial.map = videoTexture;
+                                
+                                // Store for animation loop updates
+                                videoTextures.push(videoTexture);
+                                
+                                // Auto-play the video
+                                videoElement.play().catch(err => {
+                                    console.warn('Video autoplay failed, will play on user interaction:', err);
+                                    // Retry on first user interaction
+                                    document.addEventListener('click', () => {
+                                        videoElement.play();
+                                    }, { once: true });
+                                });
+                                
+                                console.log('Video texture applied to:', meshObject.name);
+                            } else {
+                                console.warn(`Video element not found: ${meshConfig.videoElementId}`);
+                            }
+                        } else if (meshConfig.baseColor) {
                             if (meshConfig.baseColor.startsWith('#')) {
                                 try {
                                     newMaterial.color = new THREE.Color(meshConfig.baseColor);
@@ -1276,6 +1320,13 @@
             requestAnimationFrame(animate);
             
             controls.update();
+            
+            // Update video textures
+            videoTextures.forEach(videoTexture => {
+                if (videoTexture && videoTexture.image && videoTexture.image.readyState >= videoTexture.image.HAVE_CURRENT_DATA) {
+                    videoTexture.needsUpdate = true;
+                }
+            });
             
             bloomObjects.forEach(obj => {
                 if (obj.original) {
