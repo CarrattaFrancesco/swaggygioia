@@ -3,445 +3,1828 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Three.js GLTF Loader</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <title>Selective Bloom Example</title>
     <style>
-        body { margin: 0; }
-        canvas { display: block; }
-        .overlay {
-            position: absolute;
+        body { 
+            margin: 0; 
+            overflow: hidden;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        canvas { 
+            display: block; 
+            transition: cursor 0.2s ease;
+        }
+        
+        #loading-container {
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0);
-            display: none;
-            justify-content: flex-end;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
+            z-index: 1000;
         }
-        .card {
-            width: 100%;
-            height: 100px;
-            background: white;
-            border-radius: 0;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        
+        #loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #333;
+            border-top: 3px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #loading-text {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        #loading-progress {
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        #error-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
             padding: 20px;
-            margin: 50px;
-			left: 50%;
-			height: 50%;
+            border-radius: 8px;
+            display: none;
+            max-width: 500px;
+            text-align: center;
+            z-index: 1001;
         }
-
-        .close-btn {
-            top: 10px;
-            right: 10px;
-            background: red;
+        
+        #error-container h3 {
+            margin-top: 0;
+        }
+        
+        #retry-button {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        
+        #retry-button:hover {
+            background: #ddd;
+        }
+        
+        /* 3D Project Popup Styles */
+        #project-popup {
+            position: fixed;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(20, 20, 20, 0.95));
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 
+                        0 0 0 1px rgba(255, 255, 255, 0.1),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            display: none;
+            z-index: 1000;
+            max-width: 350px;
+            min-width: 280px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Arial', sans-serif;
+            transform: perspective(1000px) rotateX(5deg) rotateY(-5deg);
+            transform-origin: bottom left;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        #project-popup.show {
+            display: block;
+            animation: popupAppear 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes popupAppear {
+            0% {
+                opacity: 0;
+                transform: perspective(1000px) rotateX(15deg) rotateY(-15deg) scale(0.8) translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: perspective(1000px) rotateX(5deg) rotateY(-5deg) scale(1) translateY(0);
+            }
+        }
+        
+        .project-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 8px 0;
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .project-category {
+            font-size: 12px;
+            color: #64ffda;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+        
+        .project-description {
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            color: #e0e0e0;
+        }
+        
+        .project-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .project-detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .detail-label {
+            color: #9e9e9e;
+            font-weight: 500;
+        }
+        
+        .detail-value {
+            color: #ffffff;
+            font-weight: 600;
+        }
+        
+        .project-technologies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        
+        .tech-tag {
+            background: linear-gradient(45deg, #1e88e5, #42a5f5);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .project-status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-completed {
+            background: linear-gradient(45deg, #4caf50, #66bb6a);
+            color: white;
+        }
+        
+        .status-progress {
+            background: linear-gradient(45deg, #ff9800, #ffb74d);
+            color: white;
+        }
+        
+        .status-prototype {
+            background: linear-gradient(45deg, #9c27b0, #ba68c8);
+            color: white;
+        }
+        
+        /* 80% Screen Project Modal */
+        #project-card {
+            position: fixed;
+            top: 10%;
+            left: 10%;
+            width: 80%;
+            height: 80%;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.98), rgba(10, 10, 10, 0.98));
+            color: white;
+            display: none;
+            z-index: 2000;
+            backdrop-filter: blur(20px);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            border-radius: 20px;
+            box-shadow: 0 50px 150px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        #project-card.show {
+            display: flex;
+            animation: modalFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes modalFadeIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .modal-content {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 60px 40px 40px;
+            gap: 60px;
+            align-items: stretch;
+            box-sizing: border-box;
+        }
+        
+        .carousel-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 500px;
+            min-width: 0;
+        }
+        
+        .project-image-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 4/3;
+            background: #1a1a1a;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 30px 100px rgba(0, 0, 0, 0.8);
+            margin-bottom: 30px;
+        }
+        
+        .project-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.3s ease;
+        }
+        
+        .carousel-controls {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.7);
             color: white;
             border: none;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
         }
-
-        @media (max-width: 768px) {
-            .overlay {
-                justify-content: center;
-                align-items: flex-end;
+        
+        .carousel-controls:hover {
+            background: rgba(30, 136, 229, 0.8);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .carousel-prev {
+            left: 20px;
+        }
+        
+        .carousel-next {
+            right: 20px;
+        }
+        
+        .details-section {
+            flex: 1;
+            padding: 40px;
+            max-width: 600px;
+            min-width: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            position: relative;
+            padding-right: 70px;
+        }
+        
+        .card-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 68, 68, 0.9);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+        
+        .card-close-btn:hover {
+            background: rgba(255, 102, 102, 1);
+            transform: scale(1.1);
+        }
+        
+        .card-title {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 0;
+            color: #ffffff;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            line-height: 1.2;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .card-category {
+            font-size: 18px;
+            color: #64ffda;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 15px 0 30px 0;
+            font-weight: 600;
+        }
+        
+        .card-description {
+            font-size: 20px;
+            line-height: 1.7;
+            margin-bottom: 40px;
+            color: #e0e0e0;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .card-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .card-detail-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 16px;
+        }
+        
+        .detail-label {
+            color: #9e9e9e;
+            font-weight: 500;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .detail-value {
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .card-technologies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .tech-tag {
+            background: linear-gradient(45deg, #1e88e5, #42a5f5);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .carousel-info {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .image-counter {
+            font-size: 20px;
+            color: #64ffda;
+            font-weight: 600;
+            padding: 15px 30px;
+            background: rgba(100, 255, 218, 0.1);
+            border-radius: 30px;
+            border: 2px solid rgba(100, 255, 218, 0.3);
+            display: inline-block;
+        }
+        
+        .image-dots {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .dot.active {
+            background: #64ffda;
+            transform: scale(1.2);
+        }
+        
+        .dot:hover {
+            background: rgba(100, 255, 218, 0.7);
+        }
+        
+        /* Zoom mode overlay */
+        #zoom-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 1500;
+        }
+        
+        #zoom-overlay.show {
+            display: block;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .modal-content {
+                gap: 40px;
+                padding: 40px 20px 20px;
             }
-            .card {
-                width: 100%;
-                height: 50%; /* Adjust this value to change the height of the card on mobile */
-                margin: 0;
-                border-radius: 10px 10px 0 0;
+            
+            .card-title {
+                font-size: 36px;
+            }
+            
+            .card-description {
+                font-size: 18px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            #project-card {
+                top: 5%;
+                left: 5%;
+                width: 90%;
+                height: 90%;
+            }
+            
+            .modal-content {
+                flex-direction: column;
+                gap: 30px;
+                padding: 20px;
+                height: 100%;
+            }
+            
+            .card-close-btn {
+                top: 15px;
+                right: 15px;
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+            
+            .card-header {
+                padding-right: 60px;
+            }
+            
+            .carousel-section {
+                order: 1;
+                min-height: 300px;
+                flex-shrink: 0;
+            }
+            
+            .details-section {
+                order: 2;
+                padding: 20px;
+                max-width: 100%;
+                flex: 1;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+            
+            .project-image-container {
+                max-width: 100%;
+                aspect-ratio: 16/10;
+            }
+            
+            .card-title {
+                font-size: 28px;
+            }
+            
+            .card-description {
+                font-size: 16px;
+            }
+            
+            .card-details {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                padding: 20px;
+            }
+            
+            .carousel-controls {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+            
+            .carousel-prev {
+                left: 10px;
+            }
+            
+            .carousel-next {
+                right: 10px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="overlay  ">
-
-
-		<div class="card mt-3">
-			<button class="close-btn" onclick="closeOverlay()">X</button>
-			<h2>Card Title</h2>
-			<p>Card content goes here...</p>
-		</div>
-
-
+    <div id="loading-container">
+        <div id="loading-spinner"></div>
+        <div id="loading-text">Loading Experience...</div>
+        <div id="loading-progress">Initializing</div>
+    </div>
+    
+    <div id="error-container">
+        <h3>Error Loading Experience</h3>
+        <p id="error-message"></p>
+        <button id="retry-button" onclick="location.reload()">Retry</button>
+    </div>
+    
+    <div id="project-popup">
+        <div class="project-title"></div>
+        <div class="project-category"></div>
+        <div class="project-description"></div>
+        <div class="project-details">
+            <div class="project-detail-row">
+                <span class="detail-label">Year:</span>
+                <span class="detail-value project-year"></span>
+            </div>
+            <div class="project-detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value project-status"></span>
+            </div>
+        </div>
+        <div class="project-technologies"></div>
+    </div>
+    
+    <div id="zoom-overlay"></div>
+    
+    <div id="project-card">
+        <div class="modal-content">
+            <div class="carousel-section">
+                <div class="project-image-container">
+                    <img class="project-image" id="current-project-image" src="" alt="Project Image" style="display: none;">
+                    <button class="carousel-controls carousel-prev" id="prev-image" title="Previous Image">‹</button>
+                    <button class="carousel-controls carousel-next" id="next-image" title="Next Image">›</button>
+                </div>
+                <div class="carousel-info">
+                    <div class="image-counter"><span id="current-image">1</span> / <span id="total-images">-</span></div>
+                    <div class="image-dots" id="image-dots"></div>
+                </div>
+            </div>
+            
+            <div class="details-section">
+                <button class="card-close-btn" id="close-project-card">×</button>
+                <div class="card-header">
+                    <div>
+                        <h1 class="card-title"></h1>
+                        <div class="card-category"></div>
+                    </div>
+                </div>
+                <div class="card-description"></div>
+                <div class="card-details">
+                    <div class="card-detail-row">
+                        <span class="detail-label">Year:</span>
+                        <span class="detail-value card-year"></span>
+                    </div>
+                    <div class="card-detail-row">
+                        <span class="detail-label">Status:</span>
+                        <span class="detail-value card-status"></span>
+                    </div>
+                </div>
+                <div class="card-technologies"></div>
+            </div>
+        </div>
     </div>
 
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-	<script>
-       
-    </script>
-	<script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
 
-		function closeOverlay() {
-			// Hide the overlay
-			document.querySelector('.overlay').style.display = 'none';
-			
-			// Restore all objects to their original appearance if darkening was applied
-			if (window.darkeningApplied) {
-				scene.traverse(function(node) {
-					if (node.isMesh && node.userData.originalMaterial) {
-						// Restore original material properties
-						node.material.color.copy(node.userData.originalMaterial.color);
-						if (node.material.emissive) {
-							node.material.emissive.copy(node.userData.originalMaterial.emissive);
-						}
-					}
-				});
-				
-				// Reset state variables
-				window.highlightedPaper = null;
-				window.darkeningApplied = false;
-			}
-		}
-		// Scene setup
-		const scene = new THREE.Scene();
-		const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-		const renderer = new THREE.WebGLRenderer({ antialias: true });
-		renderer.setSize(window.innerWidth, window.innerHeight);
-		renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-		document.body.appendChild(renderer.domElement);
-		
-
-		
-		// // Cinematic tone mapping settings
-		// renderer.toneMapping = THREE.ACESFilmicToneMapping;
-		// renderer.toneMappingExposure = 1;
-		// renderer.outputEncoding = THREE.sRGBEncoding;
-		// renderer.physicallyCorrectLights = true;
-
-		// // Load HDRI environment map
-		const pmremGenerator = new THREE.PMREMGenerator(renderer);
-		pmremGenerator.compileEquirectangularShader();
-
-		new THREE.RGBELoader()
-			.setPath('data/models/')
-			.load('hdr.hdr', function (texture) {
-				texture.mapping = THREE.EquirectangularReflectionMapping;
-				const envMap = pmremGenerator.fromEquirectangular(texture).texture;
-				scene.environment = envMap;
-				// grey background
-				texture.dispose();
-				pmremGenerator.dispose();
-			});
-
-		// var bgTexture = new THREE.TextureLoader().load('data/sfondo.png');
-		// scene.background = bgTexture;
-		
-
-		// Bloom effect setup
-		const renderScene = new THREE.RenderPass(scene, camera);
-
-		const bloomParams = {
-			strength: 1.5,
-			radius: 0.4,
-			threshold: 0.2
-		};
-
-		const bloomPass = new THREE.UnrealBloomPass(
-			new THREE.Vector2(window.innerWidth, window.innerHeight),
-			bloomParams.strength,
-			bloomParams.radius,
-			bloomParams.threshold
-		);
-
-		const composer = new THREE.EffectComposer(renderer);
-		composer.addPass(renderScene);
-		composer.addPass(bloomPass);
-
-		// Enable high-quality shadows in the renderer
-		renderer.shadowMap.enabled = true;
-		renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-		
-		// ambient light
-		const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-		scene.add(ambientLight);
-
-		// Add this after your scene is created
-		// const axesHelper = new THREE.AxesHelper(5); // The parameter is the length of the axes
-		// scene.add(axesHelper);
-
-        // OrbitControls
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
-        controls.dampingFactor = 0.25;
-        controls.screenSpacePanning = false;
-        controls.maxPolarAngle = Math.PI / 2;
-
-        const onKeyDown = function (event) {
-            switch (event.code) {
-                case 'Enter':
-                    const lookDirection = camera.getWorldDirection(new THREE.Vector3()).normalize();
-                    const lookAtPoint = new THREE.Vector3().copy(camera.position).add(lookDirection);
-                    console.log("look at", lookAtPoint);
-                    camera.lookAt(lookAtPoint);
-                    break;
-            }
-        };
-
-        document.addEventListener('keydown', onKeyDown, false);
-
-        // Raycaster for detecting clicks
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
-        // Load GLTF model
-        const loader = new THREE.GLTFLoader();
-		// create a dictionary to store the textures
-		const textures = {};
-
-        loader.load('data/models/photoboot.glb', function (gltf) {
-            gltf.scene.traverse(function (node) {
-				
-				// Add this to your mesh traversal where you want objects to glow
-				if (node.isMesh && !node.name.includes('Cubo004')) {
-					console.log(node.name);
-					console.log(node.material);
-					// Make material emissive for glow
-					node.material.emissive = null;  // Choose glow color
-					node.material.emissiveIntensity = 0;              // Adjust glow strength
-				}
-				
-
-            });
-            scene.add(gltf.scene);
-            gltf.scene.position.set(0, -4, 0);
-            gltf.scene.scale.set(1, 1, 1);
-
-			// for all the objects in the scene, store the textures_index by default is 1
-			gltf.scene.traverse(function (child) {
-				if (child.isMesh) {
-					textures[child.name] = 1;
-				}
-			});
-
-			console.log(textures);
-
-            // Add event listener for clicks and touch events
-            window.addEventListener('click', onMouseClick, false);
-            window.addEventListener('touchstart', onTouchStart, false);
-
-            function onMouseClick(event) {
-                handleClick(event.clientX, event.clientY);
+    <script>
+        class LoadingManager {
+            constructor() {
+                this.loadingContainer = document.getElementById('loading-container');
+                this.loadingText = document.getElementById('loading-text');
+                this.loadingProgress = document.getElementById('loading-progress');
+                this.errorContainer = document.getElementById('error-container');
+                this.errorMessage = document.getElementById('error-message');
+                this.totalAssets = 0;
+                this.loadedAssets = 0;
             }
 
-            function onTouchStart(event) {
-                if (event.touches.length > 0) {
-                    handleClick(event.touches[0].clientX, event.touches[0].clientY);
+            setTotalAssets(count) {
+                this.totalAssets = count;
+            }
+
+            assetLoaded(assetName) {
+                this.loadedAssets++;
+                this.updateProgress(`Loading ${assetName}... (${this.loadedAssets}/${this.totalAssets})`);
+            }
+
+            updateProgress(message) {
+                this.loadingProgress.textContent = message;
+            }
+
+            hideLoading() {
+                this.loadingContainer.style.display = 'none';
+            }
+
+            showError(message) {
+                this.loadingContainer.style.display = 'none';
+                this.errorMessage.textContent = message;
+                this.errorContainer.style.display = 'block';
+            }
+        }
+
+        class SceneManager {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.controls = null;
+                this.bloomScene = null;
+                this.video = null;
+                this.videoTexture = null;
+                this.isInitialized = false;
+                this.model = null;
+                this.bloomObjects = []; // Store bloom object references
+                
+                // Hover highlighting properties
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                this.hoveredObject = null;
+                this.originalMaterials = new Map(); // Store original material properties
+                
+                // Project popup properties
+                this.projectsData = null;
+                this.popup = null;
+                this.popupTimeout = null;
+                
+                // Zoom mode properties
+                this.isZoomMode = false;
+                this.zoomedObject = null;
+                this.originalCameraPosition = new THREE.Vector3();
+                this.originalCameraTarget = new THREE.Vector3();
+                this.projectCard = null;
+                this.zoomOverlay = null;
+                this.currentImageIndex = 1;
+                this.totalImages = 0;
+                this.imageBasePath = '';
+                
+                // Auto-rotation properties
+                this.autoRotate = true;
+                this.rotationSpeed = -0.005;
+                this.userHasInteracted = false;
+                
+                // Constants
+                this.BLOOM_LAYER = 1;
+                this.NORMAL_LAYER = 0;
+                
+                this.loadingManager = new LoadingManager();
+            }
+
+            async init() {
+                try {
+                    this.loadingManager.setTotalAssets(4); // Model, HDRI, Video, Projects
+                    this.loadingManager.updateProgress('Initializing scene...');
+                    
+                    this.setupScene();
+                    this.setupRenderer();
+                    this.setupCamera();
+                    this.setupControls();
+                    this.setupLights();
+                    
+                    await this.loadAssets();
+                    this.setupPostProcessing();
+                    this.setupEventListeners();
+                    
+                    this.loadingManager.hideLoading();
+                    this.isInitialized = true;
+                    this.animate();
+                } catch (error) {
+                    console.error('Initialization failed:', error);
+                    this.loadingManager.showError(`Failed to initialize: ${error.message}`);
                 }
             }
 
-            function calculateResponsiveValues() {
-                const aspectRatio = window.innerWidth / window.innerHeight;
-                let step_left = aspectRatio < 1 ? 0 : 1.5 * Math.min(1, aspectRatio - 1);
-                let zoom = window.innerWidth < 768 ? 3 : 2;
-                let step_up = window.innerWidth < 768 ? -5.5 : -4;
-                console.log("step_left", step_left, "zoom", zoom, "aspectRatio", aspectRatio);
-                return { step_left, zoom, step_up };
+            setupScene() {
+                this.scene = new THREE.Scene();
+                this.bloomScene = new THREE.Scene();
             }
 
-            function handleClick(clientX, clientY) {
+            setupRenderer() {
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                document.body.appendChild(this.renderer.domElement);
+            }
 
+            setupCamera() {
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.z = 20;
+                this.camera.position.y = 10;
+                this.camera.layers.enableAll();
+            }
+
+            setupControls() {
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+            }
+
+            setupLights() {
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                this.scene.add(ambientLight);
+            }
+
+            async loadAssets() {
+                const promises = [
+                    this.loadHDRI(),
+                    this.loadModel(),
+                    this.loadVideo(),
+                    this.loadProjectsData()
+                ];
+
+                await Promise.all(promises);
+            }
+
+            loadHDRI() {
+                return new Promise((resolve, reject) => {
+                    const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+                    pmremGenerator.compileEquirectangularShader();
+
+                    new THREE.RGBELoader()
+                        .setPath('data/models/')
+                        .load('hdr.hdr', 
+                            (texture) => {
+                                try {
+                                    texture.mapping = THREE.EquirectangularReflectionMapping;
+                                    const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                                    this.scene.environment = envMap;
+                                    texture.dispose();
+                                    pmremGenerator.dispose();
+                                    this.loadingManager.assetLoaded('HDRI Environment');
+                                    resolve();
+                                } catch (error) {
+                                    reject(new Error(`HDRI processing failed: ${error.message}`));
+                                }
+                            },
+                            (progress) => {
+                                const percent = (progress.loaded / progress.total) * 100;
+                                this.loadingManager.updateProgress(`Loading HDRI... ${percent.toFixed(0)}%`);
+                            },
+                            (error) => {
+                                reject(new Error(`Failed to load HDRI: ${error.message}`));
+                            }
+                        );
+                });
+            }
+
+            loadModel() {
+                return new Promise((resolve, reject) => {
+                    const loader = new THREE.GLTFLoader();
+                    loader.load('data/models/photoboot.glb',
+                        (gltf) => {
+                            try {
+                                this.model = gltf.scene;
+                                this.scene.add(this.model);
+                                this.processModel(this.model);
+                                this.loadingManager.assetLoaded('3D Model');
+                                resolve();
+                            } catch (error) {
+                                reject(new Error(`Model processing failed: ${error.message}`));
+                            }
+                        },
+                        (progress) => {
+                            const percent = (progress.loaded / progress.total) * 100;
+                            this.loadingManager.updateProgress(`Loading Model... ${percent.toFixed(0)}%`);
+                        },
+                        (error) => {
+                            reject(new Error(`Failed to load model: ${error.message}`));
+                        }
+                    );
+                });
+            }
+
+            async loadVideo() {
+                return new Promise((resolve, reject) => {
+                    this.video = document.createElement('video');
+                    this.video.src = 'data/video/video.mp4';
+                    this.video.loop = true;
+                    this.video.muted = true;
+                    this.video.playsInline = true;
+                    this.video.crossOrigin = "anonymous";
+                    
+                    this.video.addEventListener('canplaythrough', () => {
+                        try {
+                            this.setupVideoTexture();
+                            this.loadingManager.assetLoaded('Video');
+                            resolve();
+                        } catch (error) {
+                            reject(new Error(`Video setup failed: ${error.message}`));
+                        }
+                    });
+                    
+                    this.video.addEventListener('error', (e) => {
+                        reject(new Error(`Video loading failed: ${e.target.error?.message || 'Unknown video error'}`));
+                    });
+                    
+                    this.video.load();
+                });
+            }
+
+            setupVideoTexture() {
+                this.videoTexture = new THREE.VideoTexture(this.video);
+                this.videoTexture.minFilter = THREE.LinearFilter;
+                this.videoTexture.magFilter = THREE.LinearFilter;
+                this.videoTexture.format = THREE.RGBAFormat;
+                this.videoTexture.rotation = -Math.PI / 2;
+                this.videoTexture.center.set(0.5, 0.5);
+            }
+            
+            async loadProjectsData() {
+                return new Promise((resolve, reject) => {
+                    fetch('data/projects.json')
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            this.projectsData = data;
+                            this.loadingManager.assetLoaded('Projects Data');
+                            resolve();
+                        })
+                        .catch(error => {
+                            reject(new Error(`Failed to load projects data: ${error.message}`));
+                        });
+                });
+            }
+
+            processModel(model) {
+                // Store references to bloom objects for rotation sync
+                this.bloomObjects = [];
+                
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        if (child.name === 'Cubo004' || child.name === 'VIDEO') {
+                            child.layers.set(this.BLOOM_LAYER);
+                            const clone = child.clone();
+                            this.bloomScene.add(clone);
+                            
+                            // Store reference for rotation synchronization
+                            this.bloomObjects.push({
+                                original: child,
+                                clone: clone
+                            });
+                            
+                            if (child.name === 'VIDEO') {
+                                this.applyVideoMaterial(child, clone);
+                            } else {
+                                this.applyGlowMaterial(child);
+                            }
+                        } else {
+                            child.layers.set(this.NORMAL_LAYER);
+                        }
+                    }
+                });
+            }
+
+            applyVideoMaterial(child, clone) {
+                const videoMaterial = new THREE.MeshStandardMaterial({
+                    map: this.videoTexture,
+                    color: new THREE.Color(0x555555),
+                    emissive: new THREE.Color(0xffffff),
+                    emissiveMap: this.videoTexture,
+                    emissiveIntensity: 1.0
+                });
+                
+                videoMaterial.map.repeat.set(3, 3);
+                child.material = videoMaterial;
+                clone.material = videoMaterial;
+                
+                this.video.play().catch(error => {
+                    console.warn('Video autoplay failed:', error);
+                });
+            }
+
+            applyGlowMaterial(child) {
+                child.material.emissive = new THREE.Color(0xffffff);
+                child.material.emissiveIntensity = 1.0;
+                child.material.emissiveMap = child.material.map;
+            }
+
+            setupPostProcessing() {
+                const bloomParams = {
+                    strength: 1.5,
+                    radius: 0.8,
+                    threshold: 0.3
+                };
+
+                const renderScene = new THREE.RenderPass(this.scene, this.camera);
+                const bloomPass = new THREE.UnrealBloomPass(
+                    new THREE.Vector2(window.innerWidth, window.innerHeight),
+                    bloomParams.strength,
+                    bloomParams.radius,
+                    bloomParams.threshold
+                );
+
+                const finalPass = new THREE.ShaderPass(
+                    new THREE.ShaderMaterial({
+                        uniforms: {
+                            baseTexture: { value: null },
+                            bloomTexture: { value: null }
+                        },
+                        vertexShader: `
+                            varying vec2 vUv;
+                            void main() {
+                                vUv = uv;
+                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                            }
+                        `,
+                        fragmentShader: `
+                            uniform sampler2D baseTexture;
+                            uniform sampler2D bloomTexture;
+                            varying vec2 vUv;
+                            void main() {
+                                vec4 baseColor = texture2D(baseTexture, vUv);
+                                vec4 bloomColor = texture2D(bloomTexture, vUv);
+                                float baseAlpha = baseColor.a;
+                                gl_FragColor = baseColor + vec4(bloomColor.rgb * (1.0-baseAlpha), 0.0);
+                            }
+                        `,
+                        defines: {}
+                    }), "baseTexture"
+                );
+                finalPass.needsSwap = true;
+
+                const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+                this.bloomComposer = new THREE.EffectComposer(this.renderer, renderTarget);
+                this.bloomComposer.renderToScreen = false;
+                this.bloomComposer.addPass(new THREE.RenderPass(this.bloomScene, this.camera));
+                this.bloomComposer.addPass(bloomPass);
+
+                this.finalComposer = new THREE.EffectComposer(this.renderer);
+                this.finalComposer.addPass(renderScene);
+                this.finalComposer.addPass(finalPass);
+
+                finalPass.uniforms["bloomTexture"].value = this.bloomComposer.renderTarget2.texture;
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', () => this.handleResize());
+                
+                // Handle visibility changes to pause/resume video
+                document.addEventListener('visibilitychange', () => {
+                    if (this.video) {
+                        if (document.hidden) {
+                            this.video.pause();
+                        } else {
+                            this.video.play().catch(error => console.warn('Video resume failed:', error));
+                        }
+                    }
+                });
+                
+                // Initialize popup and card elements
+                this.popup = document.getElementById('project-popup');
+                this.projectCard = document.getElementById('project-card');
+                this.zoomOverlay = document.getElementById('zoom-overlay');
+                
+                // Add mouse move event listener for hover highlighting
+                this.renderer.domElement.addEventListener('mousemove', (event) => this.onMouseMove(event));
+                
+                // Add click event listener
+                this.renderer.domElement.addEventListener('click', (event) => this.onMouseClick(event));
+                
+                // Add close button event listener
+                document.getElementById('close-project-card').addEventListener('click', () => this.exitZoomMode());
+                
+                // Add navigation arrows event listeners
+                document.getElementById('prev-image').addEventListener('click', () => this.previousImage());
+                document.getElementById('next-image').addEventListener('click', () => this.nextImage());
+                
+                // Detect user interaction to stop auto-rotation
+                this.setupInteractionDetection();
+            }
+            
+            setupInteractionDetection() {
+                // Mouse events
+                this.renderer.domElement.addEventListener('mousedown', () => this.stopAutoRotation());
+                this.renderer.domElement.addEventListener('wheel', () => this.stopAutoRotation());
+                
+                // Touch events
+                this.renderer.domElement.addEventListener('touchstart', () => this.stopAutoRotation());
+                
+                // Keyboard events
+                window.addEventListener('keydown', (event) => {
+                    // Stop on arrow keys or WASD
+                    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(event.code)) {
+                        this.stopAutoRotation();
+                    }
+                    
+                    // Log camera position when "P" is pressed
+                    if (event.code === 'KeyP') {
+                        console.log('Camera Position:', {
+                            x: this.camera.position.x,
+                            y: this.camera.position.y,
+                            z: this.camera.position.z
+                        });
+                        console.log('Camera Target:', {
+                            x: this.controls.target.x,
+                            y: this.controls.target.y,
+                            z: this.controls.target.z
+                        });
+                    }
+                });
+                
+                // OrbitControls events
+                this.controls.addEventListener('start', () => this.stopAutoRotation());
+            }
+            
+            stopAutoRotation() {
+                if (this.autoRotate) {
+                    this.autoRotate = false;
+                    this.userHasInteracted = true;
+                    console.log('Auto-rotation stopped due to user interaction');
+                }
+            }
+            
+            onMouseMove(event) {
+                if (!this.isInitialized || !this.model || this.isZoomMode) return;
+                
                 // Calculate mouse position in normalized device coordinates
-                mouse.x = (clientX / window.innerWidth) * 2 - 1;
-                mouse.y = -(clientY / window.innerHeight) * 2 + 1;
-
-                // Update the raycaster with the camera and mouse position
-                raycaster.setFromCamera(mouse, camera);
-
-                // Calculate objects intersecting the ray
-                const intersects = raycaster.intersectObjects(gltf.scene.children, true);
-
-
-				for (let i = 0; i < 1; i++) {
-					const intersect = intersects[i];
-					// check if the intersection is undefined
-					if (intersect === undefined) {
-						return;
-					}
-
-					console.log(intersect.object.name);
-					return;
-					if (intersect.object.name.includes('Paper')) {
-						// Store the clicked paper object
-						const clickedPaper = intersect.object;
-						
-						// Check if this is a different paper than the one currently highlighted
-						if (!window.highlightedPaper || window.highlightedPaper !== clickedPaper) {
-							// First, restore all objects to original state if they were modified
-							if (window.darkeningApplied) {
-								gltf.scene.traverse(function(node) {
-									if (node.isMesh && node.userData.originalMaterial) {
-										// Restore original material properties
-										node.material.color.copy(node.userData.originalMaterial.color);
-										if (node.material.emissive) {
-											node.material.emissive.copy(node.userData.originalMaterial.emissive);
-										}
-									}
-								});
-							}
-							
-							// Darken everything except the clicked paper
-							gltf.scene.traverse(function(node) {
-								if (node.isMesh && node !== clickedPaper) {
-									// Store original material properties if not already stored
-									if (!node.userData.originalMaterial) {
-										node.userData.originalMaterial = {
-											color: node.material.color.clone(),
-											emissive: node.material.emissive ? node.material.emissive.clone() : new THREE.Color(0x000000)
-										};
-									}
-									// Darken the object
-									node.material.color.multiplyScalar(0.5);
-								}
-							});
-							
-							// Make clicked paper slightly brighter
-							if (!clickedPaper.userData.originalMaterial) {
-								clickedPaper.userData.originalMaterial = {
-									color: clickedPaper.material.color.clone(),
-									emissive: clickedPaper.material.emissive ? clickedPaper.material.emissive.clone() : new THREE.Color(0x000000)
-								};
-							}
-							clickedPaper.material.emissive.set(0x222222);
-							
-							// Update highlighted paper and darkening flag
-							window.highlightedPaper = clickedPaper;
-							window.darkeningApplied = true;
-						}
-
-						// Animate the overlay appearance
-						const overlay = document.querySelector('.overlay');
-						
-						if (overlay.style.display !== 'flex') {
-							overlay.style.opacity = 0;
-							overlay.style.display = 'flex';
-							new TWEEN.Tween(overlay.style)
-							.to({ opacity: 1 }, 500) // 500ms for the animation duration
-							.easing(TWEEN.Easing.Quadratic.InOut)
-							.start();
-						}
-					   
-						// Move the camera in front of the poster with animation
-						const posterPosition = intersect.object.position;
-						const { step_left, zoom, step_up } = calculateResponsiveValues();
-						let targetPosition = {
-							x: posterPosition.x,
-							y: posterPosition.y + step_up,
-							z: posterPosition.z
-						};
-						let posterPosition_tmp = {
-							x: posterPosition.x,
-							y: posterPosition.y + step_up,
-							z: posterPosition.z
-						};
-
-						if (intersect.object.name.includes('Front')) {
-							step_z = 5;
-						} else if (intersect.object.name.includes('Left')) {
-							targetPosition.x = posterPosition.x + step_left;
-							posterPosition_tmp.x = posterPosition.x + step_left;
-							targetPosition.z = posterPosition.z + zoom;
-						} else if (intersect.object.name.includes('Right')) {
-							targetPosition.x = posterPosition.x - step_left;
-							posterPosition_tmp.x = posterPosition.x - step_left;
-							targetPosition.z = posterPosition.z - zoom;
-						} else if (intersect.object.name.includes('Back')) {
-							targetPosition.z = posterPosition.z + step_left;
-							posterPosition_tmp.z = posterPosition.z + step_left;
-							targetPosition.x = posterPosition.x - zoom;
-						} else {
-							console.log("Error: No such poster found");
-						}
-
-						const lookDirection = camera.getWorldDirection(new THREE.Vector3()).normalize();
-						const lookAtPoint = new THREE.Vector3().copy(camera.position).add(lookDirection);
-
-						controls.enabled = false; // Disable controls during animation
-						current_time = Date.now();
-						animation_time = 500; // 500ms for the animation duration
-						new TWEEN.Tween(camera.position)
-							.to(targetPosition, animation_time)
-							.easing(TWEEN.Easing.Quadratic.InOut)
-							.onUpdate(() => {
-								t = (Date.now() - current_time) / animation_time;
-								t = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // Ease in-out function
-								const lookAtPosition = new THREE.Vector3().lerpVectors(lookAtPoint, posterPosition_tmp, t);
-								camera.lookAt(lookAtPosition);
-							})
-							.onComplete(() => {
-								controls.enabled = true; // Re-enable controls after animation
-							})
-							.start();
-
-						// Change the image displayed on the mesh
-						const textureLoader = new THREE.TextureLoader();
-						let imageIndex = textures[intersect.object.name];
-						let newTexture;
-						let imageName;
-
-						function loadNextImage() {
-							imageName = `img_${imageIndex}.jpg`;
-							newTexture = textureLoader.load(`data/IMG/${intersect.object.name}/${imageName}`, function (texture) {
-								intersect.object.material.map = texture;
-								intersect.object.material.needsUpdate = true;
-								textures[intersect.object.name] = imageIndex + 1;
-								console.log('Image file name:', imageName);
-							}, undefined, function () {
-								console.error('Image not found:', imageName);
-								// If the image is not found, restart from img_1
-								imageIndex = 1;
-								loadNextImage();
-							});
-						}
-
-						loadNextImage();
-					}
-				}
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                
+                // Update the raycaster
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                
+                // Find intersections with objects containing "Paper" in their name
+                const paperObjects = [];
+                if (this.model) {
+                    this.model.traverse((child) => {
+                        if (child.isMesh && child.name.includes('Paper')) {
+                            paperObjects.push(child);
+                        }
+                    });
+                }
+                
+                const intersects = this.raycaster.intersectObjects(paperObjects, false);
+                
+                if (intersects.length > 0) {
+                    const newHoveredObject = intersects[0].object;
+                    
+                    // If we're hovering over a different object
+                    if (this.hoveredObject !== newHoveredObject) {
+                        // Restore previous object
+                        this.restoreObjectMaterial(this.hoveredObject);
+                        
+                        // Highlight new object
+                        this.highlightObject(newHoveredObject);
+                        this.hoveredObject = newHoveredObject;
+                        
+                        // Change cursor to pointer
+                        this.renderer.domElement.style.cursor = 'pointer';
+                        
+                        // Show project popup
+                        this.showProjectPopup(newHoveredObject, event);
+                    } else {
+                        // Update popup position for the same object
+                        this.updatePopupPosition(event);
+                    }
+                } else {
+                    // No Paper object is being hovered
+                    if (this.hoveredObject) {
+                        this.restoreObjectMaterial(this.hoveredObject);
+                        this.hoveredObject = null;
+                        
+                        // Reset cursor
+                        this.renderer.domElement.style.cursor = 'default';
+                        
+                        // Hide project popup
+                        this.hideProjectPopup();
+                    }
+                }
             }
-        }, undefined, function (error) {
-            console.error(error);
-        });
+            
+            highlightObject(object) {
+                if (!object || !object.material) return;
+                
+                // Store original material properties if not already stored
+                if (!this.originalMaterials.has(object.uuid)) {
+                    this.originalMaterials.set(object.uuid, {
+                        color: object.material.color ? object.material.color.clone() : null,
+                        emissive: object.material.emissive ? object.material.emissive.clone() : null,
+                        emissiveIntensity: object.material.emissiveIntensity || 0
+                    });
+                }
+                
+                // Apply highlight effect
+                if (object.material.emissive) {
+                    object.material.emissive.setHex(0x444444); // Subtle glow
+                }
+                if (object.material.color) {
+                    object.material.color.multiplyScalar(1.2); // Brighten slightly
+                }
+                object.material.emissiveIntensity = 0.3;
+                object.material.needsUpdate = true;
+            }
+            
+            restoreObjectMaterial(object) {
+                if (!object || !object.material || !this.originalMaterials.has(object.uuid)) return;
+                
+                const original = this.originalMaterials.get(object.uuid);
+                
+                // Restore original material properties
+                if (original.color && object.material.color) {
+                    object.material.color.copy(original.color);
+                }
+                if (original.emissive && object.material.emissive) {
+                    object.material.emissive.copy(original.emissive);
+                }
+                object.material.emissiveIntensity = original.emissiveIntensity;
+                object.material.needsUpdate = true;
+            }
+            
+            getFallbackProjectData(objectName) {
+                return {
+                    name: `Project ${objectName}`,
+                    description: "This is a sample project description. The project showcases innovative design and cutting-edge technology implementation.",
+                    category: "Sample Project",
+                    year: "2024",
+                    technologies: ["JavaScript", "Three.js", "WebGL"],
+                    status: "In Progress"
+                };
+            }
+            
+            showProjectPopup(object, event) {
+                if (!this.popup || !object.name) return;
+                
+                let projectData = null;
+                if (this.projectsData && this.projectsData[object.name]) {
+                    projectData = this.projectsData[object.name];
+                } else {
+                    console.warn(`No project data found for object: ${object.name}, using fallback data`);
+                    projectData = this.getFallbackProjectData(object.name);
+                }
+                
+                // Clear any existing timeout
+                if (this.popupTimeout) {
+                    clearTimeout(this.popupTimeout);
+                }
+                
+                // Populate popup content
+                this.popup.querySelector('.project-title').textContent = projectData.name;
+                this.popup.querySelector('.project-category').textContent = projectData.category;
+                this.popup.querySelector('.project-description').textContent = projectData.description;
+                this.popup.querySelector('.project-year').textContent = projectData.year;
+                
+                // Set status with appropriate styling
+                const statusElement = this.popup.querySelector('.project-status');
+                statusElement.textContent = projectData.status;
+                statusElement.className = 'detail-value project-status';
+                
+                switch(projectData.status.toLowerCase()) {
+                    case 'completed':
+                        statusElement.classList.add('status-completed');
+                        break;
+                    case 'in progress':
+                        statusElement.classList.add('status-progress');
+                        break;
+                    case 'prototype':
+                        statusElement.classList.add('status-prototype');
+                        break;
+                }
+                
+                // Populate technologies
+                const techContainer = this.popup.querySelector('.project-technologies');
+                techContainer.innerHTML = '';
+                if (projectData.technologies) {
+                    projectData.technologies.forEach(tech => {
+                        const techTag = document.createElement('span');
+                        techTag.className = 'tech-tag';
+                        techTag.textContent = tech;
+                        techContainer.appendChild(techTag);
+                    });
+                }
+                
+                // Position and show popup
+                this.updatePopupPosition(event);
+                this.popup.classList.add('show');
+            }
+            
+            updatePopupPosition(event) {
+                if (!this.popup) return;
+                
+                const offsetX = 20;
+                const offsetY = -10;
+                
+                let x = event.clientX + offsetX;
+                let y = event.clientY + offsetY;
+                
+                // Ensure popup stays within viewport
+                const popupRect = this.popup.getBoundingClientRect();
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                
+                if (x + popupRect.width > viewportWidth) {
+                    x = event.clientX - popupRect.width - offsetX;
+                }
+                
+                if (y + popupRect.height > viewportHeight) {
+                    y = event.clientY - popupRect.height - offsetY;
+                }
+                
+                this.popup.style.left = `${x}px`;
+                this.popup.style.top = `${y}px`;
+            }
+            
+            hideProjectPopup() {
+                if (!this.popup) return;
+                
+                // Add a small delay to prevent flickering
+                this.popupTimeout = setTimeout(() => {
+                    this.popup.classList.remove('show');
+                }, 100);
+            }
+            
+            onMouseClick(event) {
+                if (!this.isInitialized || !this.model) return;
+                
+                if (this.isZoomMode) {
+                    // In zoom mode, clicking the object no longer cycles images
+                    // Images are now controlled via the navigation arrows in the card
+                    return;
+                }
+                
+                // Calculate mouse position
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                
+                // Update the raycaster
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                
+                // Find intersections with Paper objects
+                const paperObjects = [];
+                this.model.traverse((child) => {
+                    if (child.isMesh && child.name.includes('Paper')) {
+                        paperObjects.push(child);
+                    }
+                });
+                
+                const intersects = this.raycaster.intersectObjects(paperObjects, false);
+                
+                if (intersects.length > 0) {
+                    const clickedObject = intersects[0].object;
+                    this.enterZoomMode(clickedObject);
+                }
+            }
+            
+            enterZoomMode(object) {
+                if (this.isZoomMode) return;
+                
+                this.isZoomMode = true;
+                this.zoomedObject = object;
+                this.currentImageIndex = 1;
+                
+                // Store original camera state
+                this.originalCameraPosition.copy(this.camera.position);
+                this.originalCameraTarget.copy(this.controls.target);
+                
+                // Setup image path
+                this.imageBasePath = `data/IMG/${object.name}/`;
+                
+                // Count available images
+                this.countImages().then(() => {
+                    // Load first image
+                    this.loadImage(this.currentImageIndex);
+                    
+                    // Update image counter, dots, and navigation buttons
+                    this.updateImageCounter();
+                    this.updateNavigationButtons();
+                });
+                
+                // Show static project card
+                this.showProjectCard(object);
+                
+                // Show overlay
+                this.zoomOverlay.classList.add('show');
+                
+                // Animate camera to zoom position
+                this.animateToZoomPosition(object);
+                
+                // Disable auto-rotation
+                this.autoRotate = false;
+                
+                // Hide hover popup if visible
+                this.hideProjectPopup();
+            }
+            
+            exitZoomMode() {
+                if (!this.isZoomMode) return;
+                
+                this.isZoomMode = false;
+                
+                // Hide project card and overlay
+                this.projectCard.classList.remove('show');
+                this.zoomOverlay.classList.remove('show');
+                
+                // Hide the image element
+                const imageElement = document.getElementById('current-project-image');
+                if (imageElement) {
+                    imageElement.style.display = 'none';
+                    imageElement.src = '';
+                }
+                
+                // Clear image dots
+                const dotsContainer = document.getElementById('image-dots');
+                if (dotsContainer) {
+                    dotsContainer.innerHTML = '';
+                }
+                
+                // Animate camera back to original position
+                this.animateToOriginalPosition();
+                
+                // Restore materials
+                this.restoreObjectMaterial(this.zoomedObject);
+                this.zoomedObject = null;
+                
+                // Reset image index
+                this.currentImageIndex = 1;
+                this.totalImages = 0;
+                
+                // Re-enable auto-rotation if user hasn't manually interacted
+                if (!this.userHasInteracted) {
+                    this.autoRotate = true;
+                }
+            }
+            
+            async countImages() {
+                // Try to count images by attempting to load them
+                let count = 1;
+                
+                while (count <= 20) { // Maximum 20 images
+                    try {
+                        await this.checkImageExists(`${this.imageBasePath}img_${count}.jpg`);
+                        count++;
+                    } catch {
+                        break;
+                    }
+                }
+                
+                this.totalImages = Math.max(1, count - 1);
+            }
+            
+            checkImageExists(src) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve();
+                    img.onerror = () => reject();
+                    img.src = src;
+                });
+            }
+            
+            cycleImage() {
+                if (!this.zoomedObject) return;
+                
+                this.currentImageIndex++;
+                if (this.currentImageIndex > this.totalImages) {
+                    this.currentImageIndex = 1;
+                }
+                
+                this.loadImage(this.currentImageIndex);
+                this.updateImageCounter();
+                this.updateNavigationButtons();
+            }
+            
+            nextImage() {
+                if (!this.zoomedObject) return;
+                
+                this.currentImageIndex++;
+                if (this.currentImageIndex > this.totalImages) {
+                    this.currentImageIndex = 1;
+                }
+                
+                this.loadImage(this.currentImageIndex);
+                this.updateImageCounter();
+                this.updateNavigationButtons();
+            }
+            
+            previousImage() {
+                if (!this.zoomedObject) return;
+                
+                this.currentImageIndex--;
+                if (this.currentImageIndex < 1) {
+                    this.currentImageIndex = this.totalImages;
+                }
+                
+                this.loadImage(this.currentImageIndex);
+                this.updateImageCounter();
+                this.updateNavigationButtons();
+            }
+            
+            loadImage(index) {
+                if (!this.zoomedObject) return;
+                
+                const imagePath = `${this.imageBasePath}img_${index}.jpg`;
+                const imageElement = document.getElementById('current-project-image');
+                
+                if (imageElement) {
+                    // Load image in the modal
+                    imageElement.onload = () => {
+                        imageElement.style.display = 'block';
+                    };
+                    
+                    imageElement.onerror = () => {
+                        console.warn(`Failed to load image: ${imagePath}`);
+                        // If image fails to load, try img_1.jpg
+                        if (index !== 1) {
+                            this.currentImageIndex = 1;
+                            this.loadImage(1);
+                        }
+                    };
+                    
+                    imageElement.src = imagePath;
+                }
+                
+                // Also update the 3D object texture
+                const textureLoader = new THREE.TextureLoader();
+                textureLoader.load(
+                    imagePath,
+                    (texture) => {
+                        this.zoomedObject.material.map = texture;
+                        this.zoomedObject.material.needsUpdate = true;
+                    },
+                    undefined,
+                    (error) => {
+                        console.warn(`Failed to load 3D texture: ${imagePath}`);
+                    }
+                );
+            }
+            
+            updateImageCounter() {
+                document.getElementById('current-image').textContent = this.currentImageIndex;
+                document.getElementById('total-images').textContent = this.totalImages;
+                this.updateImageDots();
+            }
+            
+            updateImageDots() {
+                const dotsContainer = document.getElementById('image-dots');
+                if (!dotsContainer) return;
+                
+                dotsContainer.innerHTML = '';
+                
+                for (let i = 1; i <= this.totalImages; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'dot';
+                    if (i === this.currentImageIndex) {
+                        dot.classList.add('active');
+                    }
+                    dot.addEventListener('click', () => {
+                        this.currentImageIndex = i;
+                        this.loadImage(this.currentImageIndex);
+                        this.updateImageCounter();
+                        this.updateNavigationButtons();
+                    });
+                    dotsContainer.appendChild(dot);
+                }
+            }
+            
+            updateNavigationButtons() {
+                const prevBtn = document.getElementById('prev-image');
+                const nextBtn = document.getElementById('next-image');
+                
+                if (prevBtn && nextBtn) {
+                    // Enable/disable buttons based on current position (optional)
+                    // For now, we'll keep them always enabled since we loop
+                    prevBtn.disabled = false;
+                    nextBtn.disabled = false;
+                    
+                    // Update button states for single image
+                    if (this.totalImages <= 1) {
+                        prevBtn.disabled = true;
+                        nextBtn.disabled = true;
+                    }
+                }
+            }
+            
+            showProjectCard(object) {
+                if (!this.projectCard || !object.name) return;
+                
+                let projectData = null;
+                if (this.projectsData && this.projectsData[object.name]) {
+                    projectData = this.projectsData[object.name];
+                } else {
+                    console.warn(`No project data found for object: ${object.name}, using fallback data`);
+                    projectData = this.getFallbackProjectData(object.name);
+                }
+                
+                // Populate card content
+                this.projectCard.querySelector('.card-title').textContent = projectData.name;
+                this.projectCard.querySelector('.card-category').textContent = projectData.category;
+                this.projectCard.querySelector('.card-description').textContent = projectData.description;
+                this.projectCard.querySelector('.card-year').textContent = projectData.year;
+                
+                // Set status with styling
+                const statusElement = this.projectCard.querySelector('.card-status');
+                statusElement.textContent = projectData.status;
+                statusElement.className = 'detail-value card-status';
+                
+                switch(projectData.status.toLowerCase()) {
+                    case 'completed':
+                        statusElement.classList.add('status-completed');
+                        break;
+                    case 'in progress':
+                        statusElement.classList.add('status-progress');
+                        break;
+                    case 'prototype':
+                        statusElement.classList.add('status-prototype');
+                        break;
+                }
+                
+                // Populate technologies
+                const techContainer = this.projectCard.querySelector('.card-technologies');
+                techContainer.innerHTML = '';
+                if (projectData.technologies) {
+                    projectData.technologies.forEach(tech => {
+                        const techTag = document.createElement('span');
+                        techTag.className = 'tech-tag';
+                        techTag.textContent = tech;
+                        techContainer.appendChild(techTag);
+                    });
+                }
+                
+                // Show the card
+                this.projectCard.classList.add('show');
+            }
+            
+            animateToZoomPosition(object) {
+                // Calculate zoom position based on object position and orientation
+                const objectPosition = object.position;
+                const zoomDistance = 3;
+                const heightOffset = 1;
+                const cameraOffset = 1;
+                
+                let targetPosition = new THREE.Vector3();
+                const targetLookAt = objectPosition.clone();
+                
+                // Determine camera position based on paper orientation
+                if (object.name.toLowerCase().includes('front')) {
+                    // Paper faces forward (negative Z direction)
+                    targetPosition.set(
+                        objectPosition.x + zoomDistance,
+                        objectPosition.y + heightOffset,
+                        objectPosition.z 
+                    );
+                } else if (object.name.toLowerCase().includes('back')) {
+                    // Paper faces backward (positive Z direction)
+                    targetPosition.set(
+                        objectPosition.x - zoomDistance,
+                        objectPosition.y + heightOffset,
+                        objectPosition.z 
+                    );
+                } else if (object.name.toLowerCase().includes('left')) {
+                    // Paper faces left (negative X direction)
+                    targetPosition.set(
+                        objectPosition.x - cameraOffset,
+                        objectPosition.y +heightOffset,
+                        objectPosition.z + zoomDistance
+                    );
+                } else if (object.name.toLowerCase().includes('right')) {
+                    // Paper faces right (positive X direction)
+                    targetPosition.set(
+                        objectPosition.x ,
+                        objectPosition.y + heightOffset,
+                        objectPosition.z - zoomDistance
+                    );
+                } else {
+                    // Default fallback (treat as front-facing)
+                    targetPosition.set(
+                        objectPosition.x,
+                        objectPosition.y + heightOffset,
+                        objectPosition.z + zoomDistance
+                    );
+                }
+                
+                // Disable controls during animation
+                this.controls.enabled = false;
+                
+                // Animate camera position
+                const startPosition = this.camera.position.clone();
+                const startLookAt = this.controls.target.clone();
+                
+                let progress = 0;
+                const animationDuration = 1000; // 1 second
+                const startTime = Date.now();
+                
+                const animateCamera = () => {
+                    const elapsed = Date.now() - startTime;
+                    progress = Math.min(elapsed / animationDuration, 1);
+                    
+                    // Smooth easing function
+                    const easeProgress = progress < 0.5 
+                        ? 2 * progress * progress 
+                        : -1 + (4 - 2 * progress) * progress;
+                    
+                    // Interpolate camera position
+                    this.camera.position.lerpVectors(startPosition, targetPosition, easeProgress);
+                    
+                    // Interpolate look-at target
+                    const currentLookAt = new THREE.Vector3().lerpVectors(startLookAt, targetLookAt, easeProgress);
+                    this.camera.lookAt(currentLookAt);
+                    this.controls.target.copy(currentLookAt);
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animateCamera);
+                    } else {
+                        // Re-enable controls
+                        this.controls.enabled = true;
+                        this.controls.update();
+                    }
+                };
+                
+                animateCamera();
+            }
+            
+            animateToOriginalPosition() {
+                // Disable controls during animation
+                this.controls.enabled = false;
+                
+                const startPosition = this.camera.position.clone();
+                const startLookAt = this.controls.target.clone();
+                
+                let progress = 0;
+                const animationDuration = 1000;
+                const startTime = Date.now();
+                
+                const animateCamera = () => {
+                    const elapsed = Date.now() - startTime;
+                    progress = Math.min(elapsed / animationDuration, 1);
+                    
+                    const easeProgress = progress < 0.5 
+                        ? 2 * progress * progress 
+                        : -1 + (4 - 2 * progress) * progress;
+                    
+                    this.camera.position.lerpVectors(startPosition, this.originalCameraPosition, easeProgress);
+                    
+                    const currentLookAt = new THREE.Vector3().lerpVectors(startLookAt, this.originalCameraTarget, easeProgress);
+                    this.camera.lookAt(currentLookAt);
+                    this.controls.target.copy(currentLookAt);
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animateCamera);
+                    } else {
+                        this.controls.enabled = true;
+                        this.controls.update();
+                    }
+                };
+                
+                animateCamera();
+            }
 
-        // Camera position
-        camera.position.z = 15;
-        camera.position.y = 0;
+            handleResize() {
+                if (!this.isInitialized) return;
+                
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.finalComposer.setSize(window.innerWidth, window.innerHeight);
+                this.bloomComposer.setSize(window.innerWidth, window.innerHeight);
+            }
 
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-            TWEEN.update(); // Update TWEEN animations
-			// Use composer instead of renderer
-			composer.render();
+            animate() {
+                if (!this.isInitialized) return;
+                
+                requestAnimationFrame(() => this.animate());
+                
+                try {
+                    // Auto-rotate the model if enabled
+                    if (this.autoRotate && this.model) {
+                        this.model.rotation.y += this.rotationSpeed;
+                        
+                        // Sync bloom objects rotation with main model
+                        if (this.bloomObjects) {
+                            this.bloomObjects.forEach(obj => {
+                                // Copy the world matrix from original to clone
+                                obj.clone.matrix.copy(obj.original.matrixWorld);
+                                obj.clone.matrix.decompose(obj.clone.position, obj.clone.quaternion, obj.clone.scale);
+                            });
+                        }
+                    }
+                    
+                    // Update video texture
+                    if (this.video && this.video.readyState === this.video.HAVE_ENOUGH_DATA) {
+                        this.videoTexture.needsUpdate = true;
+                    }
+                    
+                    this.controls.update();
+                    
+                    // Render bloom
+                    this.renderer.autoClear = true;
+                    this.bloomComposer.render();
+                    
+                    // Render final scene
+                    this.renderer.autoClear = false;
+                    this.renderer.clearDepth();
+                    this.finalComposer.render();
+                } catch (error) {
+                    console.error('Animation frame error:', error);
+                }
+            }
         }
-        animate();
 
-        // Handle window resize
-        window.addEventListener('resize', function () {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-			composer.setSize(window.innerWidth, window.innerHeight);
-		});
-
-
-
-
+        // Initialize the application
+        const sceneManager = new SceneManager();
+        
+        // Start initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => sceneManager.init());
+        } else {
+            sceneManager.init();
+        }
     </script>
 </body>
 </html>
