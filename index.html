@@ -20,6 +20,27 @@
     <!-- 3D Container -->
     <div id="container"></div>
 
+    <!-- Project info card -->
+    <div id="project-card">
+        <button id="card-close" aria-label="Close">&times;</button>
+        <h2 id="card-title"></h2>
+        <p id="card-description"></p>
+        <div id="card-meta">
+            <span id="card-category"></span>
+            <span id="card-year"></span>
+            <span id="card-status"></span>
+        </div>
+        <div id="card-carousel-nav">
+            <button id="carousel-prev" aria-label="Previous">&lsaquo;</button>
+            <span id="carousel-counter"></span>
+            <button id="carousel-next" aria-label="Next">&rsaquo;</button>
+        </div>
+    </div>
+
+    <!-- Carousel side arrows (outside card, on viewport edges) -->
+    <button id="carousel-arrow-left" class="carousel-arrow" aria-label="Previous image">&lsaquo;</button>
+    <button id="carousel-arrow-right" class="carousel-arrow" aria-label="Next image">&rsaquo;</button>
+
     <!-- Hidden video for card texture -->
     <video id="cardVideo" style="display: none;" loop muted playsinline crossorigin="anonymous">
         <source src="PHOTOBOOTH_1/TXT/CARD/card_animation.mp4" type="video/mp4">>

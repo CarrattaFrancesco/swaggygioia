@@ -21,3 +21,211 @@ body {
 #container:active {
     cursor: grabbing;
 }
+
+/* ─── Project Card ─── */
+#project-card {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(30px);
+    max-width: 520px;
+    width: calc(100% - 32px);
+    background: rgba(10, 10, 10, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 24px 28px 20px;
+    color: #f0f0f0;
+    font-family: 'Arial', sans-serif;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s;
+    pointer-events: none;
+}
+
+#project-card.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+#card-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.2s;
+}
+
+#card-close:hover {
+    color: #fff;
+}
+
+#card-title {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #fff;
+}
+
+#card-description {
+    margin: 0 0 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+#card-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 12px;
+}
+
+#card-meta span:not(:empty)::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+#card-meta span:first-child:not(:empty)::before {
+    display: none;
+}
+
+/* ─── Carousel controls inside card ─── */
+#card-carousel-nav {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+#carousel-prev,
+#carousel-next {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, color 0.2s;
+    padding: 0;
+    line-height: 1;
+}
+
+#carousel-prev:hover,
+#carousel-next:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+}
+
+#carousel-counter {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.4);
+    letter-spacing: 1px;
+    min-width: 40px;
+    text-align: center;
+}
+
+/* ─── Viewport-edge carousel arrows ─── */
+.carousel-arrow {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(10, 10, 10, 0.6);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    width: 40px;
+    height: 60px;
+    font-size: 24px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 101;
+    transition: background 0.2s, color 0.2s;
+    padding: 0;
+    line-height: 1;
+    border-radius: 6px;
+}
+
+.carousel-arrow:hover {
+    background: rgba(10, 10, 10, 0.85);
+    color: #fff;
+}
+
+#carousel-arrow-left {
+    left: 16px;
+}
+
+#carousel-arrow-right {
+    right: 16px;
+}
+
+/* Show side arrows when card is visible (controlled via JS class) */
+.carousel-arrow.visible {
+    display: flex;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 480px) {
+    #project-card {
+        bottom: 16px;
+        padding: 18px 20px 16px;
+        border-radius: 10px;
+    }
+
+    #card-title {
+        font-size: 16px;
+    }
+
+    #card-description {
+        font-size: 12px;
+    }
+
+    #card-meta {
+        gap: 8px;
+        font-size: 10px;
+    }
+
+    .carousel-arrow {
+        width: 32px;
+        height: 48px;
+        font-size: 20px;
+    }
+
+    #carousel-arrow-left {
+        left: 8px;
+    }
+
+    #carousel-arrow-right {
+        right: 8px;
+    }
+}

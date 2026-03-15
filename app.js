@@ -26,6 +26,15 @@ let originalCameraTarget = new THREE.Vector3();
 // Video textures storage
 let videoTextures = [];
 
+// Project data (loaded from projects.json)
+window.projectsData = {};
+
+// Carousel state
+let currentCarouselIndex = 0;
+let currentPaperKey = null;
+let currentPaperMesh = null;
+let carouselTextureCache = new Map();
+
 // Texture paths mapping (make it global for preloading)
 window.texturePaths = {
     "stop": {
@@ -332,11 +341,52 @@ function init() {
     // Add lights
     setupLighting();
 
-    // Load model
-    loadPhotoboothModel();
+    // Load project data first, then model (so poster detection works during traverse)
+    loadProjectsData(function() {
+        loadPhotoboothModel();
+    });
 
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
+
+    // Escape key to close card and reset
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            hideProjectCard();
+            if (focusedObject) resetCamera();
+        }
+        if (currentPaperKey && document.getElementById('project-card').classList.contains('visible')) {
+            if (e.key === 'ArrowRight') navigateCarousel(1);
+            if (e.key === 'ArrowLeft') navigateCarousel(-1);
+        }
+    });
+
+    // Card close button
+    document.getElementById('card-close').addEventListener('click', function(e) {
+        e.stopPropagation();
+        hideProjectCard();
+        if (focusedObject) resetCamera();
+    });
+
+    // Carousel buttons (inside card)
+    document.getElementById('carousel-prev').addEventListener('click', function(e) {
+        e.stopPropagation();
+        navigateCarousel(-1);
+    });
+    document.getElementById('carousel-next').addEventListener('click', function(e) {
+        e.stopPropagation();
+        navigateCarousel(1);
+    });
+
+    // Carousel side arrows (viewport edges)
+    document.getElementById('carousel-arrow-left').addEventListener('click', function(e) {
+        e.stopPropagation();
+        navigateCarousel(-1);
+    });
+    document.getElementById('carousel-arrow-right').addEventListener('click', function(e) {
+        e.stopPropagation();
+        navigateCarousel(1);
+    });
 }
 
 function setupLighting() {
@@ -682,17 +732,49 @@ function applyTextures(model) {
         return texture;
     }
 
+    const posterMeshes = [];
     model.traverse(function(child) {
         if (child.isMesh && child.material) {
             const meshName = child.name.toLowerCase();
             const materialName = child.material.name.toLowerCase();
+            
+            if (meshName.includes('poster')) {
+                posterMeshes.push(child.name);
+            }
             
             console.log('Processing mesh:', child.name, 'Material:', child.material.name);
             
             const appliedTexture = applyDynamicTextures(child, meshName, materialName, loadTexture);
             
             if (!appliedTexture) {
-                if (child.material.isMeshStandardMaterial) {
+                // Check if this is a registered poster — apply img_1 texture
+                var posterProjectKey = getPaperProjectKey(child.name);
+                if (posterProjectKey) {
+                    var project = window.projectsData[posterProjectKey];
+                    if (project && project.images && project.images.length > 0) {
+                        var imgPath = 'data/IMG/' + posterProjectKey + '/' + project.images[0];
+                        var posterMat = new THREE.MeshStandardMaterial({
+                            roughness: 0.9,
+                            metalness: 0.0
+                        });
+                        child.material = posterMat;
+                        originalMaterials.set(child, posterMat);
+                        // Load texture async so we can fit it after the image is available
+                        (function(meshRef, matRef) {
+                            var texLoader = new THREE.TextureLoader();
+                            texLoader.load(imgPath, function(tex) {
+                                tex.encoding = THREE.sRGBEncoding;
+                                tex.flipY = false;
+                                fitTextureToMesh(tex, meshRef);
+                                matRef.map = tex;
+                                matRef.needsUpdate = true;
+                            });
+                        })(child, posterMat);
+                        console.log('Applied poster texture to', child.name, '→', posterProjectKey);
+                    } else {
+                        child.material = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.6 });
+                    }
+                } else if (child.material.isMeshStandardMaterial) {
                     child.material.color.setHex(0xffffff);
                     child.material.roughness = 0.3;
                     child.material.metalness = 0.6;
@@ -709,6 +791,9 @@ function applyTextures(model) {
             }
         }
     });
+    if (posterMeshes.length > 0) {
+        console.log('%c📋 Poster meshes found (' + posterMeshes.length + '):', 'color: #94ffe3; font-weight: bold;', posterMeshes);
+    }
 }
 
 function applyDynamicTextures(meshObject, meshName, materialName, loadTexture) {
@@ -939,7 +1024,37 @@ function onMouseClick(event) {
     
     if (intersects.length > 0) {
         const clickedObject = intersects[0].object;
-        focusOnObject(clickedObject);
+        const paperKey = getPaperProjectKey(clickedObject.name);
+        
+        if (paperKey) {
+            focusedObject = clickedObject;
+            currentPaperMesh = clickedObject;
+            currentPaperKey = paperKey;
+            
+            const box = new THREE.Box3().setFromObject(clickedObject);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = camera.fov * (Math.PI / 180);
+            let distance = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+            distance *= 3.5;
+            
+            // Use mesh face normal to position camera straight in front
+            const normal = getPosterNormal(clickedObject);
+            const targetPos = center.clone().add(normal.multiplyScalar(distance));
+            animateCamera(
+                camera.position.clone(), targetPos,
+                controls.target.clone(), center,
+                1500,
+                function() {
+                    showProjectCard(paperKey);
+                    initCarousel(paperKey, clickedObject);
+                }
+            );
+        } else {
+            hideProjectCard();
+            focusOnObject(clickedObject);
+        }
     }
 }
 
@@ -1003,7 +1118,7 @@ function focusOnObject(object) {
     animateCamera(startPosition, endPosition, startTarget, endTarget);
 }
 
-function animateCamera(startPos, endPos, startTarget, endTarget, duration = 1500) {
+function animateCamera(startPos, endPos, startTarget, endTarget, duration = 1500, onComplete) {
     if (isAnimatingCamera) {
         cancelAnimationFrame(animationId);
     }
@@ -1031,6 +1146,7 @@ function animateCamera(startPos, endPos, startTarget, endTarget, duration = 1500
             camera.position.copy(endPos);
             controls.target.copy(endTarget);
             controls.update();
+            if (onComplete) onComplete();
         }
     }
     
@@ -1045,10 +1161,14 @@ function onMouseDoubleClick(event) {
 function resetCamera() {
     if (isAnimatingCamera) return;
     
+    hideProjectCard();
+    
     const startPosition = camera.position.clone();
     const startTarget = controls.target.clone();
     
     focusedObject = null;
+    currentPaperKey = null;
+    currentPaperMesh = null;
     
     animateCamera(startPosition, originalCameraPosition, startTarget, originalCameraTarget);
 }
@@ -1105,6 +1225,204 @@ function animate() {
     }
 }
 
+// --- Project card & carousel functions ---
+
+function loadProjectsData(callback) {
+    fetch('data/projects.json')
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            window.projectsData = data;
+            console.log('Projects data loaded:', Object.keys(data).length, 'entries');
+            if (callback) callback();
+        })
+        .catch(function(err) {
+            console.warn('Could not load projects.json:', err);
+            if (callback) callback();
+        });
+}
+
+function getPaperProjectKey(meshName) {
+    if (!meshName) return null;
+    var name = meshName.toLowerCase();
+    if (!name.includes('poster')) return null;
+    for (var key in window.projectsData) {
+        var project = window.projectsData[key];
+        if (project.meshName && project.meshName.toLowerCase() === name) {
+            return key;
+        }
+    }
+    return null;
+}
+
+function showProjectCard(projectKey) {
+    var project = window.projectsData[projectKey];
+    if (!project) return;
+    
+    document.getElementById('card-title').textContent = project.name || projectKey;
+    document.getElementById('card-description').textContent = project.description || '';
+    document.getElementById('card-category').textContent = project.category || '';
+    document.getElementById('card-year').textContent = project.year || '';
+    document.getElementById('card-status').textContent = project.status || '';
+    
+    var card = document.getElementById('project-card');
+    card.classList.add('visible');
+    
+    var images = project.images || [];
+    var carouselNav = document.getElementById('card-carousel-nav');
+    var arrowLeft = document.getElementById('carousel-arrow-left');
+    var arrowRight = document.getElementById('carousel-arrow-right');
+    if (images.length > 1) {
+        carouselNav.style.display = 'flex';
+        arrowLeft.classList.add('visible');
+        arrowRight.classList.add('visible');
+        updateCarouselCounter();
+    } else {
+        carouselNav.style.display = 'none';
+        arrowLeft.classList.remove('visible');
+        arrowRight.classList.remove('visible');
+    }
+}
+
+function hideProjectCard() {
+    var card = document.getElementById('project-card');
+    if (card) card.classList.remove('visible');
+    var arrowLeft = document.getElementById('carousel-arrow-left');
+    var arrowRight = document.getElementById('carousel-arrow-right');
+    if (arrowLeft) arrowLeft.classList.remove('visible');
+    if (arrowRight) arrowRight.classList.remove('visible');
+    currentCarouselIndex = 0;
+}
+
+function initCarousel(paperKey, meshObject) {
+    var project = window.projectsData[paperKey];
+    if (!project || !project.images || project.images.length === 0) return;
+    
+    currentCarouselIndex = 0;
+    currentPaperKey = paperKey;
+    currentPaperMesh = meshObject;
+    updateCarouselCounter();
+}
+
+function navigateCarousel(direction) {
+    var project = window.projectsData[currentPaperKey];
+    if (!project || !project.images || project.images.length <= 1) return;
+    
+    var images = project.images;
+    currentCarouselIndex = (currentCarouselIndex + direction + images.length) % images.length;
+    
+    var imgPath = 'data/IMG/' + currentPaperKey + '/' + images[currentCarouselIndex];
+    
+    if (carouselTextureCache.has(imgPath)) {
+        applyCarouselTexture(carouselTextureCache.get(imgPath));
+        updateCarouselCounter();
+    } else {
+        var loader = new THREE.TextureLoader();
+        loader.load(imgPath, function(texture) {
+            texture.encoding = THREE.sRGBEncoding;
+            texture.flipY = false;
+            carouselTextureCache.set(imgPath, texture);
+            applyCarouselTexture(texture);
+            updateCarouselCounter();
+        }, undefined, function(err) {
+            console.warn('Failed to load carousel image:', imgPath);
+        });
+    }
+}
+
+function applyCarouselTexture(texture) {
+    if (!currentPaperMesh || !currentPaperMesh.material) return;
+    fitTextureToMesh(texture, currentPaperMesh);
+    currentPaperMesh.material.map = texture;
+    currentPaperMesh.material.needsUpdate = true;
+}
+
+function updateCarouselCounter() {
+    var project = window.projectsData[currentPaperKey];
+    if (!project || !project.images) return;
+    var counter = document.getElementById('carousel-counter');
+    if (counter) {
+        counter.textContent = (currentCarouselIndex + 1) + ' / ' + project.images.length;
+    }
+}
+
 // Initialize the scene
 init();
 animate();
+
+// --- Utility: compute poster face normal in world space ---
+function getPosterNormal(mesh) {
+    var geo = mesh.geometry;
+    var normal = new THREE.Vector3(0, 0, 1); // default: facing +Z
+    if (geo && geo.attributes && geo.attributes.normal) {
+        // Average the first face's normals
+        var nAttr = geo.attributes.normal;
+        var n = new THREE.Vector3(0, 0, 0);
+        var count = Math.min(nAttr.count, 6);
+        for (var i = 0; i < count; i++) {
+            n.x += nAttr.getX(i);
+            n.y += nAttr.getY(i);
+            n.z += nAttr.getZ(i);
+        }
+        n.divideScalar(count).normalize();
+        if (n.length() > 0.01) normal = n;
+    }
+    // Transform normal to world space
+    normal.applyQuaternion(mesh.getWorldQuaternion(new THREE.Quaternion()));
+    normal.normalize();
+    return normal;
+}
+
+// --- Utility: fit texture to mesh without stretching (cover + center) ---
+function fitTextureToMesh(texture, mesh) {
+    if (!texture.image) return;
+    var imgW = texture.image.width || texture.image.videoWidth || 1;
+    var imgH = texture.image.height || texture.image.videoHeight || 1;
+    var imgAspect = imgW / imgH;
+
+    // Get mesh bounding box aspect ratio (two largest dimensions)
+    var box = new THREE.Box3().setFromObject(mesh);
+    var size = box.getSize(new THREE.Vector3());
+    var dims = [size.x, size.y, size.z].sort(function(a, b) { return b - a; });
+    var meshAspect = dims[0] / Math.max(dims[1], 0.001);
+
+    // Create canvas matching mesh aspect ratio
+    var canvasSize = Math.max(imgW, imgH, 1024);
+    var canvasW, canvasH;
+    if (meshAspect >= 1) {
+        canvasW = canvasSize;
+        canvasH = Math.round(canvasSize / meshAspect);
+    } else {
+        canvasH = canvasSize;
+        canvasW = Math.round(canvasSize * meshAspect);
+    }
+
+    var canvas = document.createElement('canvas');
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    var ctx = canvas.getContext('2d');
+
+    // White background for blank areas
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Draw image centered, fitting entirely (contain — no crop, no stretch)
+    var drawW, drawH;
+    if (imgAspect > meshAspect) {
+        drawW = canvasW;
+        drawH = canvasW / imgAspect;
+    } else {
+        drawH = canvasH;
+        drawW = canvasH * imgAspect;
+    }
+    var x = (canvasW - drawW) / 2;
+    var y = (canvasH - drawH) / 2;
+    ctx.drawImage(texture.image, x, y, drawW, drawH);
+
+    // Replace texture image with canvas
+    texture.image = canvas;
+    texture.repeat.set(1, 1);
+    texture.offset.set(0, 0);
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.needsUpdate = true;
+}

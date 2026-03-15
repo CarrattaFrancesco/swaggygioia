@@ -1,50 +1,62 @@
 {
   "Paper_Left": {
-    "name": "MOYOLA",
-    "description": "Creazione logo w/ FrancescoBuffetta + creazione sticker",
-    "category": "Digital Art",
+    "meshName": "LEFT_POSTER",
+    "name": "MOYOLA Logo",
+    "description": "This project focuses on the creation of a visual identity for Moyola, developed in collaboration with Francesco Buffetta. The work included the design of the brand’s logo and a series of graphic stickers intended to extend the identity into everyday urban environments. The visual language combines bold typography and street-inspired aesthetics to create a recognisable and flexible identity. The goal was to establish a strong and adaptable visual foundation for the brand’s future communication. ",
+    "category": "Branding",
     "year": "2024",
-    "technologies": [],
-    "status": "Completed"
+    "role": "Graphic Design",
+    "status": "Completed",
+    "images": ["img_1.png", "img_2.png", "img_3.png"]
   },
   "Paper002_left": {
+    "meshName": "LEFT_POSTER001",
     "name": "Virtual Museum",
     "description": "Virtual reality museum experience with historical artifacts and guided tours",
     "category": "Cultural Heritage",
     "year": "2024",
     "technologies": ["VR", "Unity", "C#"],
-    "status": "In Progress"
+    "status": "In Progress",
+    "images": ["img_1.jpg", "img_2.jpg", "img_3.jpg"]
   },
   "Paper_Right": {
+    "meshName": "RIGHT_POSTER",
     "name": "E-Commerce Platform",
     "description": "Modern e-commerce solution with AR product visualization",
     "category": "Web Development",
     "year": "2023",
     "technologies": ["Vue.js", "Node.js", "AR.js"],
-    "status": "Completed"
+    "status": "Completed",
+    "images": []
   },
   "Paper002_Right": {
+    "meshName": "RIGHT_POSTER001",
     "name": "Educational VR App",
     "description": "Virtual reality application for immersive learning experiences",
     "category": "Education",
     "year": "2024",
     "technologies": ["VR", "WebXR", "JavaScript"],
-    "status": "Prototype"
+    "status": "Prototype",
+    "images": []
   },
   "Paper_Front": {
+    "meshName": "BACK_POSTER",
     "name": "Smart City Dashboard",
     "description": "Real-time data visualization dashboard for smart city management",
     "category": "Data Visualization",
     "year": "2023",
     "technologies": ["D3.js", "Python", "IoT"],
-    "status": "Completed"
+    "status": "Completed",
+    "images": []
   },
   "Paper002_Front": {
+    "meshName": "BACK_POSTER001",
     "name": "AI Art Generator",
     "description": "Machine learning powered art generation tool with custom style transfer",
     "category": "AI/ML",
     "year": "2024",
     "technologies": ["TensorFlow", "Python", "WebGL"],
-    "status": "In Progress"
+    "status": "In Progress",
+    "images": []
   }
 }
