@@ -5,8 +5,6 @@ let bloomComposer, finalComposer;
 
 // Mouse interaction variables
 let raycaster, mouse;
-let hoveredObject = null;
-let originalMaterials = new Map();
 
 // Object management variables
 let bloomObjects = [];
@@ -337,6 +335,8 @@ function init() {
     renderer.domElement.addEventListener('mousemove', onMouseMove, false);
     renderer.domElement.addEventListener('click', onMouseClick, false);
     renderer.domElement.addEventListener('dblclick', onMouseDoubleClick, false);
+    renderer.domElement.addEventListener('touchstart', onTouchStart, false);
+    renderer.domElement.addEventListener('touchend', onTouchEnd, false);
 
     // Add lights
     setupLighting();
@@ -657,7 +657,6 @@ function loadPhotoboothModel() {
                     if (child.isMesh) {
                         child.castShadow = true;
                         child.receiveShadow = true;
-                        originalMaterials.set(child, child.material.clone());
                     }
                 });
                 
@@ -758,7 +757,6 @@ function applyTextures(model) {
                             metalness: 0.0
                         });
                         child.material = posterMat;
-                        originalMaterials.set(child, posterMat);
                         // Load texture async so we can fit it after the image is available
                         (function(meshRef, matRef) {
                             var texLoader = new THREE.TextureLoader();
@@ -966,42 +964,25 @@ function setupBloomObject(meshObject, material, emissionColor, customIntensity =
     }
 }
 
-function onMouseMove(event) {
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    checkHover();
+
+
+var touchStartX = 0, touchStartY = 0;
+
+function onTouchStart(event) {
+    if (event.touches.length === 1) {
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+    }
 }
 
-function checkHover() {
-    if (!photoboothModel) return;
-    
-    raycaster.setFromCamera(mouse, camera);
-    
-    const intersectableObjects = [];
-    photoboothModel.traverse(function(child) {
-        if (child.isMesh) {
-            intersectableObjects.push(child);
-        }
-    });
-    
-    const intersects = raycaster.intersectObjects(intersectableObjects);
-    
-    if (intersects.length > 0) {
-        const newHoveredObject = intersects[0].object;
-        
-        if (hoveredObject !== newHoveredObject) {
-            if (hoveredObject) {
-                restoreObjectMaterial(hoveredObject);
-            }
-            
-            hoveredObject = newHoveredObject;
-            highlightObject(hoveredObject);
-        }
-    } else {
-        if (hoveredObject) {
-            restoreObjectMaterial(hoveredObject);
-            hoveredObject = null;
-        }
+function onTouchEnd(event) {
+    if (event.changedTouches.length !== 1) return;
+    var touch = event.changedTouches[0];
+    var dx = touch.clientX - touchStartX;
+    var dy = touch.clientY - touchStartY;
+    // Only treat as tap if finger didn't move much (not a drag/orbit)
+    if (Math.abs(dx) < 15 && Math.abs(dy) < 15) {
+        onMouseClick({ clientX: touch.clientX, clientY: touch.clientY });
     }
 }
 
@@ -1024,6 +1005,7 @@ function onMouseClick(event) {
     
     if (intersects.length > 0) {
         const clickedObject = intersects[0].object;
+        console.log('Clicked mesh:', clickedObject.name);
         const paperKey = getPaperProjectKey(clickedObject.name);
         
         if (paperKey) {
@@ -1058,31 +1040,63 @@ function onMouseClick(event) {
     }
 }
 
-function highlightObject(object) {
-    if (!object || !object.material) return;
-    
-    const highlightMaterial = object.material.clone();
-    
-    if (highlightMaterial.emissive && (highlightMaterial.emissive.r > 0 || highlightMaterial.emissive.g > 0 || highlightMaterial.emissive.b > 0)) {
-        highlightMaterial.emissiveIntensity = (highlightMaterial.emissiveIntensity || 1.0) * 1.5;
-    } else {
-        highlightMaterial.emissive = new THREE.Color(0x444444);
-        highlightMaterial.emissiveIntensity = 0.3;
-    }
-    
-    if (highlightMaterial.color) {
-        highlightMaterial.color.multiplyScalar(1.2);
-    }
-    
-    highlightMaterial.needsUpdate = true;
-    object.material = highlightMaterial;
+var hoveredObject = null;
+
+function onMouseMove(event) {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    checkHover();
 }
 
-function restoreObjectMaterial(object) {
-    if (!object || !originalMaterials.has(object)) return;
-    object.material = originalMaterials.get(object).clone();
-    object.material.needsUpdate = true;
+function checkHover() {
+    if (!photoboothModel) return;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    var intersectableObjects = [];
+    photoboothModel.traverse(function(child) {
+        if (child.isMesh && child.visible) intersectableObjects.push(child);
+    });
+
+    var intersects = raycaster.intersectObjects(intersectableObjects);
+
+    if (intersects.length > 0) {
+        var hit = intersects[0].object;
+        if (hoveredObject !== hit) {
+            if (hoveredObject) unhighlightObject(hoveredObject);
+            hoveredObject = hit;
+            highlightObject(hoveredObject);
+            renderer.domElement.style.cursor = 'pointer';
+        }
+    } else {
+        if (hoveredObject) {
+            unhighlightObject(hoveredObject);
+            hoveredObject = null;
+            renderer.domElement.style.cursor = 'default';
+        }
+    }
 }
+
+function highlightObject(obj) {
+    if (!obj || !obj.material) return;
+    if (!obj.userData._savedEmissive) {
+        obj.userData._savedEmissive = obj.material.emissive ? obj.material.emissive.clone() : new THREE.Color(0);
+        obj.userData._savedEmissiveIntensity = obj.material.emissiveIntensity || 0;
+    }
+    if (obj.material.emissive) {
+        obj.material.emissive.set(0x333333);
+        obj.material.emissiveIntensity = 0.5;
+    }
+}
+
+function unhighlightObject(obj) {
+    if (!obj || !obj.material || !obj.userData._savedEmissive) return;
+    obj.material.emissive.copy(obj.userData._savedEmissive);
+    obj.material.emissiveIntensity = obj.userData._savedEmissiveIntensity;
+    delete obj.userData._savedEmissive;
+    delete obj.userData._savedEmissiveIntensity;
+}
+
 
 function focusOnObject(object) {
     if (!object || isAnimatingCamera) return;
@@ -1243,14 +1257,9 @@ function loadProjectsData(callback) {
 
 function getPaperProjectKey(meshName) {
     if (!meshName) return null;
-    var name = meshName.toLowerCase();
-    if (!name.includes('poster')) return null;
-    for (var key in window.projectsData) {
-        var project = window.projectsData[key];
-        if (project.meshName && project.meshName.toLowerCase() === name) {
-            return key;
-        }
-    }
+    if (!meshName.toLowerCase().includes('poster')) return null;
+    // Key is the mesh name directly
+    if (window.projectsData[meshName]) return meshName;
     return null;
 }
 
@@ -1301,6 +1310,22 @@ function initCarousel(paperKey, meshObject) {
     currentPaperKey = paperKey;
     currentPaperMesh = meshObject;
     updateCarouselCounter();
+
+    // Load and apply the first image immediately
+    var imgPath = 'data/IMG/' + paperKey + '/' + project.images[0];
+    if (carouselTextureCache.has(imgPath)) {
+        applyCarouselTexture(carouselTextureCache.get(imgPath));
+    } else {
+        var loader = new THREE.TextureLoader();
+        loader.load(imgPath, function(texture) {
+            texture.encoding = THREE.sRGBEncoding;
+            texture.flipY = false;
+            carouselTextureCache.set(imgPath, texture);
+            applyCarouselTexture(texture);
+        }, undefined, function(err) {
+            console.warn('Failed to load carousel image:', imgPath);
+        });
+    }
 }
 
 function navigateCarousel(direction) {
@@ -1372,20 +1397,54 @@ function getPosterNormal(mesh) {
     return normal;
 }
 
-// --- Utility: fit texture to mesh without stretching (cover + center) ---
+// --- Utility: fit texture to mesh without stretching (contain + center) ---
 function fitTextureToMesh(texture, mesh) {
     if (!texture.image) return;
     var imgW = texture.image.width || texture.image.videoWidth || 1;
     var imgH = texture.image.height || texture.image.videoHeight || 1;
     var imgAspect = imgW / imgH;
 
-    // Get mesh bounding box aspect ratio (two largest dimensions)
-    var box = new THREE.Box3().setFromObject(mesh);
-    var size = box.getSize(new THREE.Vector3());
-    var dims = [size.x, size.y, size.z].sort(function(a, b) { return b - a; });
-    var meshAspect = dims[0] / Math.max(dims[1], 0.001);
+    // Compute mesh surface aspect ratio from UV-to-position mapping
+    // This is always correct regardless of mesh orientation or axis layout
+    var meshAspect = 1;
+    var posAttr = mesh.geometry.getAttribute('position');
+    var uvAttr = mesh.geometry.getAttribute('uv');
+    if (posAttr && uvAttr && posAttr.count >= 3) {
+        var p0 = new THREE.Vector3().fromBufferAttribute(posAttr, 0);
+        var p1 = new THREE.Vector3().fromBufferAttribute(posAttr, 1);
+        var p2 = new THREE.Vector3().fromBufferAttribute(posAttr, 2);
+        var uv0 = new THREE.Vector2().fromBufferAttribute(uvAttr, 0);
+        var uv1 = new THREE.Vector2().fromBufferAttribute(uvAttr, 1);
+        var uv2 = new THREE.Vector2().fromBufferAttribute(uvAttr, 2);
 
-    // Create canvas matching mesh aspect ratio
+        var dp1 = p1.clone().sub(p0);
+        var dp2 = p2.clone().sub(p0);
+        var duv1 = uv1.clone().sub(uv0);
+        var duv2 = uv2.clone().sub(uv0);
+
+        var det = duv1.x * duv2.y - duv1.y * duv2.x;
+        if (Math.abs(det) > 0.0001) {
+            var invDet = 1.0 / det;
+            // Tangent = dPosition/dU (physical size per UV unit in U)
+            var tangentLen = new THREE.Vector3(
+                invDet * (duv2.y * dp1.x - duv1.y * dp2.x),
+                invDet * (duv2.y * dp1.y - duv1.y * dp2.y),
+                invDet * (duv2.y * dp1.z - duv1.y * dp2.z)
+            ).length();
+            // Bitangent = dPosition/dV (physical size per UV unit in V)
+            var bitangentLen = new THREE.Vector3(
+                invDet * (-duv2.x * dp1.x + duv1.x * dp2.x),
+                invDet * (-duv2.x * dp1.y + duv1.x * dp2.y),
+                invDet * (-duv2.x * dp1.z + duv1.x * dp2.z)
+            ).length();
+            if (bitangentLen > 0.0001) {
+                meshAspect = tangentLen / bitangentLen;
+            }
+        }
+    }
+    console.log('fitTexture:', mesh.name, 'img:', imgW + 'x' + imgH, 'meshAspect:', meshAspect.toFixed(3));
+
+    // Canvas sized to preserve image quality
     var canvasSize = Math.max(imgW, imgH, 1024);
     var canvasW, canvasH;
     if (meshAspect >= 1) {
@@ -1401,13 +1460,13 @@ function fitTextureToMesh(texture, mesh) {
     canvas.height = canvasH;
     var ctx = canvas.getContext('2d');
 
-    // White background for blank areas
+    // Fill background (matches poster material)
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvasW, canvasH);
 
-    // Draw image centered, fitting entirely (contain — no crop, no stretch)
+    // Contain: fit entire image inside canvas, centered, no crop, no stretch
     var drawW, drawH;
-    if (imgAspect > meshAspect) {
+    if (imgAspect > canvasW / canvasH) {
         drawW = canvasW;
         drawH = canvasW / imgAspect;
     } else {
@@ -1418,7 +1477,7 @@ function fitTextureToMesh(texture, mesh) {
     var y = (canvasH - drawH) / 2;
     ctx.drawImage(texture.image, x, y, drawW, drawH);
 
-    // Replace texture image with canvas
+    // Replace texture with canvas — 1:1 mapping, no repeat/offset tricks
     texture.image = canvas;
     texture.repeat.set(1, 1);
     texture.offset.set(0, 0);

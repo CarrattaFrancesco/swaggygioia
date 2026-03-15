@@ -34,13 +34,23 @@
 }
 
 #brand-logo.corner {
-    top: 16px;
-    left: 16px;
+    top: 20px;
+    left: 20px;
     transform: translate(0, 0);
-    max-width: 120px;
-    max-height: 40px;
+    max-width: 200px;
+    max-height: 60px;
     animation: none;
     cursor: pointer;
+}
+
+/* Smartphone */
+@media (max-width: 768px) {
+    #brand-logo.corner {
+        top: 12px;
+        left: 12px;
+        max-width: 140px;
+        max-height: 45px;
+    }
 }
 
 @keyframes pulse {
