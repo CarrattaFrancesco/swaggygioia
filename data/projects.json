@@ -1,10 +1,10 @@
 {
   "Paper_Left": {
-    "name": "Digital Art Gallery",
-    "description": "Interactive 3D gallery showcasing digital artwork with immersive experiences",
+    "name": "MOYOLA",
+    "description": "Creazione logo w/ FrancescoBuffetta + creazione sticker",
     "category": "Digital Art",
     "year": "2024",
-    "technologies": ["Three.js", "WebGL", "React"],
+    "technologies": [],
     "status": "Completed"
   },
   "Paper002_left": {

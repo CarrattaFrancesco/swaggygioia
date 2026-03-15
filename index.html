@@ -11,19 +11,11 @@
     </script>
 </head>
 <body>
-    <!-- CRT Loading Screen -->
-    <div id="crt-container">
-        <div id="loadingScreen">
-            <div class="particles" id="particles"></div>
-            <div class="loader-content">
-                <div class="loader-title">SWAGGY GIOIA ARCHIVE</div>
-                <div class="loader-text" id="loadingText">ADDING A PINCH OF SWAG...</div>
-                <div class="loader-progress">
-                    <div class="loader-progress-bar" id="progressBar"></div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Loading overlay -->
+    <div id="crt-container"></div>
+
+    <!-- Brand logo (centered during load, slides to top-left after) -->
+    <img id="brand-logo" src="data/loading.gif" alt="Logo" />
     
     <!-- 3D Container -->
     <div id="container"></div>
