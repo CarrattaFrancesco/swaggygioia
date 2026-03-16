@@ -20,26 +20,45 @@
     <!-- 3D Container -->
     <div id="container"></div>
 
-    <!-- Project info card -->
+    <!-- Card backdrop overlay -->
+    <div id="card-backdrop"></div>
+
+    <!-- Project navigation arrows (viewport edges, switch between projects) -->
+    <button id="project-prev" class="project-nav-arrow" aria-label="Previous project">&lsaquo;</button>
+    <button id="project-next" class="project-nav-arrow" aria-label="Next project">&rsaquo;</button>
+
+    <!-- Project info card (centered modal) -->
     <div id="project-card">
         <button id="card-close" aria-label="Close">&times;</button>
-        <h2 id="card-title"></h2>
-        <p id="card-description"></p>
-        <div id="card-meta">
-            <span id="card-category"></span>
-            <span id="card-year"></span>
-            <span id="card-status"></span>
+        <div id="card-image-area">
+            <img id="card-image" alt="" />
+            <button id="carousel-prev" class="card-carousel-arrow" aria-label="Previous">&lsaquo;</button>
+            <button id="carousel-next" class="card-carousel-arrow" aria-label="Next">&rsaquo;</button>
         </div>
-        <div id="card-carousel-nav">
-            <button id="carousel-prev" aria-label="Previous">&lsaquo;</button>
-            <span id="carousel-counter"></span>
-            <button id="carousel-next" aria-label="Next">&rsaquo;</button>
+        <div id="card-info-area">
+            <div id="project-counter"></div>
+            <h2 id="card-title"></h2>
+            <p id="card-description"></p>
+            <div id="card-meta">
+                <span id="card-category"></span>
+                <span id="card-year"></span>
+                <span id="card-status"></span>
+            </div>
+            <div id="card-carousel-nav">
+                <span id="carousel-counter"></span>
+            </div>
         </div>
     </div>
 
-    <!-- Carousel side arrows (outside card, on viewport edges) -->
-    <button id="carousel-arrow-left" class="carousel-arrow" aria-label="Previous image">&lsaquo;</button>
-    <button id="carousel-arrow-right" class="carousel-arrow" aria-label="Next image">&rsaquo;</button>
+    <!-- Hover tooltip for posters -->
+    <div id="poster-tooltip">Click to view project</div>
+
+    <!-- Onboarding tip (first visit) -->
+    <div id="onboarding-tip">
+        <span id="onboarding-icon">&#9758;</span>
+        <span>Click on the posters to explore the portfolio</span>
+        <button id="onboarding-dismiss" aria-label="Dismiss">&times;</button>
+    </div>
 
     <!-- Hidden video for card texture -->
     <video id="cardVideo" style="display: none;" loop muted playsinline crossorigin="anonymous">

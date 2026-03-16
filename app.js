@@ -31,7 +31,13 @@ window.projectsData = {};
 let currentCarouselIndex = 0;
 let currentPaperKey = null;
 let currentPaperMesh = null;
-let carouselTextureCache = new Map();
+
+// Poster glow pulse state
+let posterMeshes = [];
+let glowClock = new THREE.Clock();
+
+// Project keys list for navigation
+let projectKeys = [];
 
 // Texture paths mapping (make it global for preloading)
 window.texturePaths = {
@@ -358,6 +364,8 @@ function init() {
         if (currentPaperKey && document.getElementById('project-card').classList.contains('visible')) {
             if (e.key === 'ArrowRight') navigateCarousel(1);
             if (e.key === 'ArrowLeft') navigateCarousel(-1);
+            if (e.key === 'ArrowUp') { e.preventDefault(); navigateProject(-1); }
+            if (e.key === 'ArrowDown') { e.preventDefault(); navigateProject(1); }
         }
     });
 
@@ -378,14 +386,26 @@ function init() {
         navigateCarousel(1);
     });
 
-    // Carousel side arrows (viewport edges)
-    document.getElementById('carousel-arrow-left').addEventListener('click', function(e) {
-        e.stopPropagation();
-        navigateCarousel(-1);
+    // Backdrop click to close
+    document.getElementById('card-backdrop').addEventListener('click', function(e) {
+        hideProjectCard();
+        if (focusedObject) resetCamera();
     });
-    document.getElementById('carousel-arrow-right').addEventListener('click', function(e) {
+
+    // Project navigation arrows (viewport edges)
+    document.getElementById('project-prev').addEventListener('click', function(e) {
         e.stopPropagation();
-        navigateCarousel(1);
+        navigateProject(-1);
+    });
+    document.getElementById('project-next').addEventListener('click', function(e) {
+        e.stopPropagation();
+        navigateProject(1);
+    });
+
+    // Onboarding dismiss button
+    document.getElementById('onboarding-dismiss').addEventListener('click', function(e) {
+        e.stopPropagation();
+        dismissOnboarding();
     });
 }
 
@@ -693,9 +713,26 @@ function loadPhotoboothModel() {
                 
                 setTimeout(() => {
                     hideLoadingScreen();
+                    // Show onboarding tip after scene is visible
+                    setTimeout(function() {
+                        var tip = document.getElementById('onboarding-tip');
+                        if (tip) tip.classList.add('visible');
+                        // Auto-dismiss after 6 seconds
+                        setTimeout(function() { dismissOnboarding(); }, 6000);
+                    }, 1500);
                 }, 300);
                 
                 console.log('Photobooth model loaded:', photoboothModel);
+                
+                // Collect poster meshes for glow pulse
+                photoboothModel.traverse(function(child) {
+                    if (child.isMesh && getPaperProjectKey(child.name)) {
+                        posterMeshes.push(child);
+                        // Store base emissive for pulse
+                        child.userData._posterBaseEmissive = child.material.emissive ? child.material.emissive.clone() : new THREE.Color(0);
+                        child.userData._posterBaseIntensity = child.material.emissiveIntensity || 0;
+                    }
+                });
             },
             function(progress) {
                 const modelProgress = 35 + (progress.loaded / progress.total * 30); // 35-65% for model
@@ -1045,10 +1082,10 @@ var hoveredObject = null;
 function onMouseMove(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    checkHover();
+    checkHover(event);
 }
 
-function checkHover() {
+function checkHover(event) {
     if (!photoboothModel) return;
 
     raycaster.setFromCamera(mouse, camera);
@@ -1059,6 +1096,7 @@ function checkHover() {
     });
 
     var intersects = raycaster.intersectObjects(intersectableObjects);
+    var tooltip = document.getElementById('poster-tooltip');
 
     if (intersects.length > 0) {
         var hit = intersects[0].object;
@@ -1068,12 +1106,22 @@ function checkHover() {
             highlightObject(hoveredObject);
             renderer.domElement.style.cursor = 'pointer';
         }
+        // Show tooltip only for poster meshes
+        var paperKey = getPaperProjectKey(hit.name);
+        if (paperKey && tooltip && event) {
+            tooltip.style.left = (event.clientX + 16) + 'px';
+            tooltip.style.top = (event.clientY - 12) + 'px';
+            tooltip.classList.add('visible');
+        } else if (tooltip) {
+            tooltip.classList.remove('visible');
+        }
     } else {
         if (hoveredObject) {
             unhighlightObject(hoveredObject);
             hoveredObject = null;
             renderer.domElement.style.cursor = 'default';
         }
+        if (tooltip) tooltip.classList.remove('visible');
     }
 }
 
@@ -1203,6 +1251,19 @@ function animate() {
     
     controls.update();
     
+    // Poster glow pulse
+    var elapsed = glowClock.getElapsedTime();
+    var cardVisible = document.getElementById('project-card').classList.contains('visible');
+    posterMeshes.forEach(function(mesh) {
+        if (cardVisible && mesh === currentPaperMesh) return; // skip focused poster
+        if (mesh === hoveredObject) return; // skip hovered poster (highlight takes over)
+        if (mesh.material && mesh.material.emissive) {
+            var pulse = (Math.sin(elapsed * 2.0) + 1) * 0.5; // 0..1
+            mesh.material.emissive.setHex(0x94ffe3);
+            mesh.material.emissiveIntensity = pulse * 0.12;
+        }
+    });
+    
     // Update video textures
     videoTextures.forEach(videoTexture => {
         if (videoTexture && videoTexture.image && videoTexture.image.readyState >= videoTexture.image.HAVE_CURRENT_DATA) {
@@ -1246,7 +1307,8 @@ function loadProjectsData(callback) {
         .then(function(response) { return response.json(); })
         .then(function(data) {
             window.projectsData = data;
-            console.log('Projects data loaded:', Object.keys(data).length, 'entries');
+            projectKeys = Object.keys(data);
+            console.log('Projects data loaded:', projectKeys.length, 'entries');
             if (callback) callback();
         })
         .catch(function(err) {
@@ -1273,32 +1335,78 @@ function showProjectCard(projectKey) {
     document.getElementById('card-year').textContent = project.year || '';
     document.getElementById('card-status').textContent = project.status || '';
     
-    var card = document.getElementById('project-card');
-    card.classList.add('visible');
+    // Project counter (e.g. "Project 1 / 2")
+    var counterEl = document.getElementById('project-counter');
+    if (counterEl && projectKeys.length > 0) {
+        var idx = projectKeys.indexOf(projectKey);
+        counterEl.textContent = 'Project ' + (idx + 1) + ' / ' + projectKeys.length;
+    }
     
+    // Load first image into the card
     var images = project.images || [];
+    var cardImage = document.getElementById('card-image');
+    if (images.length > 0) {
+        cardImage.src = 'data/IMG/' + projectKey + '/' + images[0];
+        cardImage.style.display = 'block';
+    } else {
+        cardImage.style.display = 'none';
+    }
+    
+    // Show/hide carousel arrows inside card
+    var prevBtn = document.getElementById('carousel-prev');
+    var nextBtn = document.getElementById('carousel-next');
     var carouselNav = document.getElementById('card-carousel-nav');
-    var arrowLeft = document.getElementById('carousel-arrow-left');
-    var arrowRight = document.getElementById('carousel-arrow-right');
     if (images.length > 1) {
+        prevBtn.classList.add('visible');
+        nextBtn.classList.add('visible');
         carouselNav.style.display = 'flex';
-        arrowLeft.classList.add('visible');
-        arrowRight.classList.add('visible');
         updateCarouselCounter();
     } else {
+        prevBtn.classList.remove('visible');
+        nextBtn.classList.remove('visible');
         carouselNav.style.display = 'none';
-        arrowLeft.classList.remove('visible');
-        arrowRight.classList.remove('visible');
     }
+    
+    // Preload all project images for instant navigation
+    images.forEach(function(imgFile) {
+        var img = new Image();
+        img.src = 'data/IMG/' + projectKey + '/' + imgFile;
+    });
+    
+    // Show/hide project navigation arrows (only if more than 1 project)
+    var projPrev = document.getElementById('project-prev');
+    var projNext = document.getElementById('project-next');
+    if (projectKeys.length > 1) {
+        projPrev.classList.add('visible');
+        projNext.classList.add('visible');
+    } else {
+        projPrev.classList.remove('visible');
+        projNext.classList.remove('visible');
+    }
+    
+    // Show backdrop and card
+    document.getElementById('card-backdrop').classList.add('visible');
+    document.getElementById('project-card').classList.add('visible');
+    
+    // Hide tooltip and onboarding
+    var tooltip = document.getElementById('poster-tooltip');
+    if (tooltip) tooltip.classList.remove('visible');
+    dismissOnboarding();
 }
 
 function hideProjectCard() {
     var card = document.getElementById('project-card');
     if (card) card.classList.remove('visible');
-    var arrowLeft = document.getElementById('carousel-arrow-left');
-    var arrowRight = document.getElementById('carousel-arrow-right');
-    if (arrowLeft) arrowLeft.classList.remove('visible');
-    if (arrowRight) arrowRight.classList.remove('visible');
+    var backdrop = document.getElementById('card-backdrop');
+    if (backdrop) backdrop.classList.remove('visible');
+    var prevBtn = document.getElementById('carousel-prev');
+    var nextBtn = document.getElementById('carousel-next');
+    if (prevBtn) prevBtn.classList.remove('visible');
+    if (nextBtn) nextBtn.classList.remove('visible');
+    var projPrev = document.getElementById('project-prev');
+    var projNext = document.getElementById('project-next');
+    if (projPrev) projPrev.classList.remove('visible');
+    if (projNext) projNext.classList.remove('visible');
     currentCarouselIndex = 0;
 }
 
@@ -1310,22 +1418,6 @@ function initCarousel(paperKey, meshObject) {
     currentPaperKey = paperKey;
     currentPaperMesh = meshObject;
     updateCarouselCounter();
-
-    // Load and apply the first image immediately
-    var imgPath = 'data/IMG/' + paperKey + '/' + project.images[0];
-    if (carouselTextureCache.has(imgPath)) {
-        applyCarouselTexture(carouselTextureCache.get(imgPath));
-    } else {
-        var loader = new THREE.TextureLoader();
-        loader.load(imgPath, function(texture) {
-            texture.encoding = THREE.sRGBEncoding;
-            texture.flipY = false;
-            carouselTextureCache.set(imgPath, texture);
-            applyCarouselTexture(texture);
-        }, undefined, function(err) {
-            console.warn('Failed to load carousel image:', imgPath);
-        });
-    }
 }
 
 function navigateCarousel(direction) {
@@ -1335,30 +1427,11 @@ function navigateCarousel(direction) {
     var images = project.images;
     currentCarouselIndex = (currentCarouselIndex + direction + images.length) % images.length;
     
-    var imgPath = 'data/IMG/' + currentPaperKey + '/' + images[currentCarouselIndex];
-    
-    if (carouselTextureCache.has(imgPath)) {
-        applyCarouselTexture(carouselTextureCache.get(imgPath));
-        updateCarouselCounter();
-    } else {
-        var loader = new THREE.TextureLoader();
-        loader.load(imgPath, function(texture) {
-            texture.encoding = THREE.sRGBEncoding;
-            texture.flipY = false;
-            carouselTextureCache.set(imgPath, texture);
-            applyCarouselTexture(texture);
-            updateCarouselCounter();
-        }, undefined, function(err) {
-            console.warn('Failed to load carousel image:', imgPath);
-        });
+    var cardImage = document.getElementById('card-image');
+    if (cardImage) {
+        cardImage.src = 'data/IMG/' + currentPaperKey + '/' + images[currentCarouselIndex];
     }
-}
-
-function applyCarouselTexture(texture) {
-    if (!currentPaperMesh || !currentPaperMesh.material) return;
-    fitTextureToMesh(texture, currentPaperMesh);
-    currentPaperMesh.material.map = texture;
-    currentPaperMesh.material.needsUpdate = true;
+    updateCarouselCounter();
 }
 
 function updateCarouselCounter() {
@@ -1368,6 +1441,57 @@ function updateCarouselCounter() {
     if (counter) {
         counter.textContent = (currentCarouselIndex + 1) + ' / ' + project.images.length;
     }
+}
+
+function navigateProject(direction) {
+    if (!currentPaperKey || projectKeys.length <= 1) return;
+    var idx = projectKeys.indexOf(currentPaperKey);
+    if (idx === -1) return;
+    var newIdx = (idx + direction + projectKeys.length) % projectKeys.length;
+    var newKey = projectKeys[newIdx];
+    
+    // Find the poster mesh for this project key
+    var newMesh = null;
+    for (var i = 0; i < posterMeshes.length; i++) {
+        if (getPaperProjectKey(posterMeshes[i].name) === newKey) {
+            newMesh = posterMeshes[i];
+            break;
+        }
+    }
+    if (!newMesh) return;
+    
+    // Update state
+    currentPaperKey = newKey;
+    currentPaperMesh = newMesh;
+    focusedObject = newMesh;
+    currentCarouselIndex = 0;
+    
+    // Animate camera to new poster
+    var box = new THREE.Box3().setFromObject(newMesh);
+    var center = box.getCenter(new THREE.Vector3());
+    var size = box.getSize(new THREE.Vector3());
+    var maxDim = Math.max(size.x, size.y, size.z);
+    var fov = camera.fov * (Math.PI / 180);
+    var distance = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 3.5;
+    var normal = getPosterNormal(newMesh);
+    var targetPos = center.clone().add(normal.multiplyScalar(distance));
+    
+    animateCamera(
+        camera.position.clone(), targetPos,
+        controls.target.clone(), center,
+        800,
+        function() {
+            showProjectCard(newKey);
+            initCarousel(newKey, newMesh);
+        }
+    );
+}
+
+function dismissOnboarding() {
+    var tip = document.getElementById('onboarding-tip');
+    if (!tip) return;
+    tip.classList.remove('visible');
+    tip.classList.add('hiding');
 }
 
 // Initialize the scene
