@@ -214,10 +214,12 @@ window.texturePaths = {
     },
     "pcube4":{
         "pcube4":{
-            baseColor: "#2F2BA9",
-            roughness: 0,
+            videoTexture: true,
+            videoElementId: "pcube4Video",
+            roughness: 0.3,
             metalness: 0,
-            emissionColor: "#2F2BA9"
+            emissionColor: "#2F2BA9",
+            emissiveIntensity: 0.1
         },
         "pcube4001":{
             baseColor:"PHOTOBOOTH_1/TXT/PHOTOBOOTH/SCREEN_OUT_standardSurface45SG_BaseColor.1001.png",
@@ -923,6 +925,12 @@ function applyDynamicTextures(meshObject, meshName, materialName, loadTexture) {
                         videoTexture.minFilter = THREE.LinearFilter;
                         videoTexture.magFilter = THREE.LinearFilter;
                         videoTexture.encoding = THREE.sRGBEncoding;
+                        videoTexture.wrapS = THREE.ClampToEdgeWrapping;
+                        videoTexture.wrapT = THREE.ClampToEdgeWrapping;
+                        videoTexture.center.set(0.5, 0.5);
+                        videoTexture.repeat.set(2.5, 2.5);
+                        videoTexture.offset.x = -0.8;
+                        videoTexture.flipY = false;
                         
                         newMaterial.map = videoTexture;
                         
@@ -1114,10 +1122,6 @@ function onMouseClick(event) {
         } else if (clickedObject.name.toLowerCase().includes('card')) {
             // Contact card click — use shared flyToCard helper
             flyToCardAndShowContact();
-        } else {
-            hideProjectCard();
-            hideContactCard();
-            focusOnObject(clickedObject);
         }
     }
 }
@@ -1145,15 +1149,24 @@ function checkHover(event) {
 
     if (intersects.length > 0) {
         var hit = intersects[0].object;
-        if (hoveredObject !== hit) {
-            if (hoveredObject) unhighlightObject(hoveredObject);
-            hoveredObject = hit;
-            highlightObject(hoveredObject);
-            renderer.domElement.style.cursor = 'pointer';
-        }
-        // Show tooltip for poster meshes or contact card mesh
         var paperKey = getPaperProjectKey(hit.name);
         var isCardMesh = hit.name.toLowerCase().includes('card');
+        var isInteractive = paperKey || isCardMesh;
+        if (isInteractive) {
+            if (hoveredObject !== hit) {
+                if (hoveredObject) unhighlightObject(hoveredObject);
+                hoveredObject = hit;
+                highlightObject(hoveredObject);
+                renderer.domElement.style.cursor = 'pointer';
+            }
+        } else {
+            if (hoveredObject) {
+                unhighlightObject(hoveredObject);
+                hoveredObject = null;
+                renderer.domElement.style.cursor = 'default';
+            }
+        }
+        // Show tooltip for poster meshes or contact card mesh
         if ((paperKey || isCardMesh) && tooltip && event) {
             tooltip.textContent = isCardMesh ? 'Click for contact info' : 'Click to view project';
             tooltip.style.left = (event.clientX + 16) + 'px';
