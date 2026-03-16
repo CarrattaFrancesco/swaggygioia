@@ -36,6 +36,25 @@ let currentPaperMesh = null;
 let posterMeshes = [];
 let glowClock = new THREE.Clock();
 
+// Contact card mesh
+let contactMesh = null;
+
+// WebP support flag (cached)
+let _supportsWebP = null;
+function supportsWebP() {
+    if (_supportsWebP !== null) return _supportsWebP;
+    try {
+        var c = document.createElement('canvas');
+        c.width = 1; c.height = 1;
+        _supportsWebP = c.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+    } catch (e) { _supportsWebP = false; }
+    return _supportsWebP;
+}
+function toWebP(src) {
+    if (!supportsWebP()) return src;
+    return src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+}
+
 // Project keys list for navigation
 let projectKeys = [];
 
@@ -359,6 +378,7 @@ function init() {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             hideProjectCard();
+            hideContactCard();
             if (focusedObject) resetCamera();
         }
         if (currentPaperKey && document.getElementById('project-card').classList.contains('visible')) {
@@ -376,6 +396,19 @@ function init() {
         if (focusedObject) resetCamera();
     });
 
+    // Contact card close button
+    document.getElementById('contact-close').addEventListener('click', function(e) {
+        e.stopPropagation();
+        hideContactCard();
+        if (focusedObject) resetCamera();
+    });
+
+    // Contact button (bottom-right UI)
+    document.getElementById('contact-btn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        flyToCardAndShowContact();
+    });
+
     // Carousel buttons (inside card)
     document.getElementById('carousel-prev').addEventListener('click', function(e) {
         e.stopPropagation();
@@ -389,6 +422,7 @@ function init() {
     // Backdrop click to close
     document.getElementById('card-backdrop').addEventListener('click', function(e) {
         hideProjectCard();
+        hideContactCard();
         if (focusedObject) resetCamera();
     });
 
@@ -732,6 +766,12 @@ function loadPhotoboothModel() {
                         child.userData._posterBaseEmissive = child.material.emissive ? child.material.emissive.clone() : new THREE.Color(0);
                         child.userData._posterBaseIntensity = child.material.emissiveIntensity || 0;
                     }
+                    // Collect contact card mesh
+                    if (child.isMesh && child.name.toLowerCase().includes('card') && !contactMesh) {
+                        contactMesh = child;
+                        child.userData._posterBaseEmissive = child.material.emissive ? child.material.emissive.clone() : new THREE.Color(0);
+                        child.userData._posterBaseIntensity = child.material.emissiveIntensity || 0;
+                    }
                 });
             },
             function(progress) {
@@ -788,23 +828,24 @@ function applyTextures(model) {
                 if (posterProjectKey) {
                     var project = window.projectsData[posterProjectKey];
                     if (project && project.images && project.images.length > 0) {
-                        var imgPath = 'data/IMG/' + posterProjectKey + '/' + project.images[0];
+                        var imgFolder = project.folder_name || posterProjectKey;
+                        var imgPath = 'data/IMG/' + imgFolder + '/' + project.images[0];
                         var posterMat = new THREE.MeshStandardMaterial({
                             roughness: 0.9,
                             metalness: 0.0
                         });
                         child.material = posterMat;
                         // Load texture async so we can fit it after the image is available
-                        (function(meshRef, matRef) {
+                        (function(meshRef, matRef, projRef) {
                             var texLoader = new THREE.TextureLoader();
                             texLoader.load(imgPath, function(tex) {
                                 tex.encoding = THREE.sRGBEncoding;
                                 tex.flipY = false;
-                                fitTextureToMesh(tex, meshRef);
+                                fitTextureToMesh(tex, meshRef, projRef.rotation || 0);
                                 matRef.map = tex;
                                 matRef.needsUpdate = true;
                             });
-                        })(child, posterMat);
+                        })(child, posterMat, project);
                         console.log('Applied poster texture to', child.name, '→', posterProjectKey);
                     } else {
                         child.material = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0.6 });
@@ -1070,8 +1111,12 @@ function onMouseClick(event) {
                     initCarousel(paperKey, clickedObject);
                 }
             );
+        } else if (clickedObject.name.toLowerCase().includes('card')) {
+            // Contact card click — use shared flyToCard helper
+            flyToCardAndShowContact();
         } else {
             hideProjectCard();
+            hideContactCard();
             focusOnObject(clickedObject);
         }
     }
@@ -1106,9 +1151,11 @@ function checkHover(event) {
             highlightObject(hoveredObject);
             renderer.domElement.style.cursor = 'pointer';
         }
-        // Show tooltip only for poster meshes
+        // Show tooltip for poster meshes or contact card mesh
         var paperKey = getPaperProjectKey(hit.name);
-        if (paperKey && tooltip && event) {
+        var isCardMesh = hit.name.toLowerCase().includes('card');
+        if ((paperKey || isCardMesh) && tooltip && event) {
+            tooltip.textContent = isCardMesh ? 'Click for contact info' : 'Click to view project';
             tooltip.style.left = (event.clientX + 16) + 'px';
             tooltip.style.top = (event.clientY - 12) + 'px';
             tooltip.classList.add('visible');
@@ -1224,6 +1271,7 @@ function resetCamera() {
     if (isAnimatingCamera) return;
     
     hideProjectCard();
+    hideContactCard();
     
     const startPosition = camera.position.clone();
     const startTarget = controls.target.clone();
@@ -1263,6 +1311,16 @@ function animate() {
             mesh.material.emissiveIntensity = pulse * 0.12;
         }
     });
+
+    // Contact card mesh: stronger + faster glow pulse
+    var contactVisible = document.getElementById('contact-card').classList.contains('visible');
+    if (contactMesh && contactMesh.material && contactMesh.material.emissive) {
+        if (contactMesh !== hoveredObject && !contactVisible) {
+            var contactPulse = (Math.sin(elapsed * 2.5) + 1) * 0.5; // faster frequency
+            contactMesh.material.emissive.setHex(0x94ffe3);
+            contactMesh.material.emissiveIntensity = contactPulse * 0.25; // 2× brighter than posters
+        }
+    }
     
     // Update video textures
     videoTextures.forEach(videoTexture => {
@@ -1328,6 +1386,9 @@ function getPaperProjectKey(meshName) {
 function showProjectCard(projectKey) {
     var project = window.projectsData[projectKey];
     if (!project) return;
+
+    // Close contact card if open (mutual exclusivity)
+    hideContactCard();
     
     document.getElementById('card-title').textContent = project.name || projectKey;
     document.getElementById('card-description').textContent = project.description || '';
@@ -1342,11 +1403,12 @@ function showProjectCard(projectKey) {
         counterEl.textContent = 'Project ' + (idx + 1) + ' / ' + projectKeys.length;
     }
     
-    // Load first image into the card
+    // Load first image into the card (prefer WebP if supported)
     var images = project.images || [];
+    var imgFolder = project.folder_name || projectKey;
     var cardImage = document.getElementById('card-image');
     if (images.length > 0) {
-        cardImage.src = 'data/IMG/' + projectKey + '/' + images[0];
+        cardImage.src = toWebP('data/IMG/' + imgFolder + '/' + images[0]);
         cardImage.style.display = 'block';
     } else {
         cardImage.style.display = 'none';
@@ -1367,10 +1429,10 @@ function showProjectCard(projectKey) {
         carouselNav.style.display = 'none';
     }
     
-    // Preload all project images for instant navigation
+    // Preload all project images for instant navigation (both formats)
     images.forEach(function(imgFile) {
         var img = new Image();
-        img.src = 'data/IMG/' + projectKey + '/' + imgFile;
+        img.src = toWebP('data/IMG/' + imgFolder + '/' + imgFile);
     });
     
     // Show/hide project navigation arrows (only if more than 1 project)
@@ -1383,9 +1445,13 @@ function showProjectCard(projectKey) {
         projPrev.classList.remove('visible');
         projNext.classList.remove('visible');
     }
+
+    // Apply per-project backdrop color
+    var backdrop = document.getElementById('card-backdrop');
+    backdrop.style.backgroundColor = project.backdropColor || 'rgba(0, 0, 0, 0.55)';
     
     // Show backdrop and card
-    document.getElementById('card-backdrop').classList.add('visible');
+    backdrop.classList.add('visible');
     document.getElementById('project-card').classList.add('visible');
     
     // Hide tooltip and onboarding
@@ -1398,7 +1464,10 @@ function hideProjectCard() {
     var card = document.getElementById('project-card');
     if (card) card.classList.remove('visible');
     var backdrop = document.getElementById('card-backdrop');
-    if (backdrop) backdrop.classList.remove('visible');
+    if (backdrop) {
+        backdrop.classList.remove('visible');
+        backdrop.style.backgroundColor = ''; // reset to CSS default
+    }
     var prevBtn = document.getElementById('carousel-prev');
     var nextBtn = document.getElementById('carousel-next');
     if (prevBtn) prevBtn.classList.remove('visible');
@@ -1408,6 +1477,63 @@ function hideProjectCard() {
     if (projPrev) projPrev.classList.remove('visible');
     if (projNext) projNext.classList.remove('visible');
     currentCarouselIndex = 0;
+}
+
+// --- Contact card functions ---
+
+function showContactCard() {
+    // Close project card if open (mutual exclusivity)
+    hideProjectCard();
+
+    var backdrop = document.getElementById('card-backdrop');
+    backdrop.classList.add('visible');
+    document.getElementById('contact-card').classList.add('visible');
+
+    var tooltip = document.getElementById('poster-tooltip');
+    if (tooltip) tooltip.classList.remove('visible');
+    dismissOnboarding();
+}
+
+function hideContactCard() {
+    var contact = document.getElementById('contact-card');
+    if (contact) contact.classList.remove('visible');
+    // Only remove backdrop if project card is also hidden
+    var projectCard = document.getElementById('project-card');
+    if (projectCard && !projectCard.classList.contains('visible')) {
+        var backdrop = document.getElementById('card-backdrop');
+        if (backdrop) {
+            backdrop.classList.remove('visible');
+            backdrop.style.backgroundColor = '';
+        }
+    }
+}
+
+function flyToCardAndShowContact() {
+    if (!contactMesh) return;
+    hideProjectCard();
+    focusedObject = contactMesh;
+
+    var box = new THREE.Box3().setFromObject(contactMesh);
+    var center = box.getCenter(new THREE.Vector3());
+    var size = box.getSize(new THREE.Vector3());
+    var maxDim = Math.max(size.x, size.y, size.z);
+    var fov = camera.fov * (Math.PI / 180);
+    var distance = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 3.5;
+
+    // Position camera at ~45° between front normal and above
+    var normal = getPosterNormal(contactMesh);
+    var up = new THREE.Vector3(0, 1, 0);
+    var direction = new THREE.Vector3().addVectors(normal, up).normalize().negate();
+    var targetPos = center.clone().add(direction.multiplyScalar(distance));
+
+    animateCamera(
+        camera.position.clone(), targetPos,
+        controls.target.clone(), center,
+        1500,
+        function() {
+            showContactCard();
+        }
+    );
 }
 
 function initCarousel(paperKey, meshObject) {
@@ -1427,9 +1553,10 @@ function navigateCarousel(direction) {
     var images = project.images;
     currentCarouselIndex = (currentCarouselIndex + direction + images.length) % images.length;
     
+    var imgFolder = project.folder_name || currentPaperKey;
     var cardImage = document.getElementById('card-image');
     if (cardImage) {
-        cardImage.src = 'data/IMG/' + currentPaperKey + '/' + images[currentCarouselIndex];
+        cardImage.src = toWebP('data/IMG/' + imgFolder + '/' + images[currentCarouselIndex]);
     }
     updateCarouselCounter();
 }
@@ -1522,11 +1649,17 @@ function getPosterNormal(mesh) {
 }
 
 // --- Utility: fit texture to mesh without stretching (contain + center) ---
-function fitTextureToMesh(texture, mesh) {
+function fitTextureToMesh(texture, mesh, rotationDeg) {
     if (!texture.image) return;
     var imgW = texture.image.width || texture.image.videoWidth || 1;
     var imgH = texture.image.height || texture.image.videoHeight || 1;
-    var imgAspect = imgW / imgH;
+    // If rotating 90 or 270 degrees, swap effective image dimensions
+    var rot = (rotationDeg || 0) % 360;
+    if (rot < 0) rot += 360;
+    var swapDims = (rot === 90 || rot === 270);
+    var effW = swapDims ? imgH : imgW;
+    var effH = swapDims ? imgW : imgH;
+    var imgAspect = effW / effH;
 
     // Compute mesh surface aspect ratio from UV-to-position mapping
     // This is always correct regardless of mesh orientation or axis layout
@@ -1599,7 +1732,17 @@ function fitTextureToMesh(texture, mesh) {
     }
     var x = (canvasW - drawW) / 2;
     var y = (canvasH - drawH) / 2;
-    ctx.drawImage(texture.image, x, y, drawW, drawH);
+
+    // Apply rotation around canvas center
+    if (rot !== 0) {
+        ctx.save();
+        ctx.translate(canvasW / 2, canvasH / 2);
+        ctx.rotate(rot * Math.PI / 180);
+        ctx.drawImage(texture.image, -drawW / 2, -drawH / 2, drawW, drawH);
+        ctx.restore();
+    } else {
+        ctx.drawImage(texture.image, x, y, drawW, drawH);
+    }
 
     // Replace texture with canvas — 1:1 mapping, no repeat/offset tricks
     texture.image = canvas;

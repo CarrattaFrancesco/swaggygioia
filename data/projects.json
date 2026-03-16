@@ -1,20 +1,139 @@
-﻿{
-  "LEFT_POSTER": {
+{
+  "-": {
     "name": "MOYOLA Logo",
     "description": "This project focuses on the creation of a visual identity for Moyola, developed in collaboration with Francesco Buffetta. The work included the design of the brand's logo and a series of graphic stickers intended to extend the identity into everyday urban environments. The visual language combines bold typography and street-inspired aesthetics to create a recognisable and flexible identity. The goal was to establish a strong and adaptable visual foundation for the brand's future communication. ",
     "category": "Branding",
     "year": "2024",
     "role": "Graphic Design",
     "status": "Completed",
-    "images": ["img_1.png", "img_2.png", "img_3.png"]
+    "images": [
+      "img_1.webp",
+      "img_2.webp",
+      "img_3.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "MOYOLA",
+    "rotation": 0
   },
-  "LEFT_POSTER008": {
+  "LEFT_POSTER005": {
     "name": "SAMMI — Street Art Museum Milano",
     "description": "This project explores the creation of a cultural identity for SAMMI (Street Art Museum Milano), a conceptual initiative designed to celebrate urban art within the city. The project includes the design of the SAMMI logo, the selection of a potential urban location, and the development of an event concept that connects artists, visitors and the city. The visual identity translates the raw language of street culture into a structured branding system, turning the museum into an open platform for contemporary urban expression.",
     "category": "Branding / Event Concept",
     "year": "2024",
     "role": "Brand Design",
     "status": "Completed",
-    "images": ["img_1.png"]
+    "images": [
+      "img_1.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "SAMMI",
+    "rotation": 90
+  },
+  "LEFT_POSTER": {
+    "name": "ANNA Drop 2",
+    "description": "Anna Merch II represents the continuation of the merchandise design work for the artist ANNA. This second phase expanded the visual system with new graphics and products, strengthening the connection between the artist’s identity and the merchandise collection. The project focused on maintaining recognisability while introducing fresh visual elements. The objective was to evolve the merchandise language without losing the core identity established in the first drop. ",
+    "category": "Merchandising / Creative Direction ",
+    "year": "2024",
+    "role": "Graphic Direction",
+    "status": "Completed",
+    "images": [
+      "IMG_5372.webp",
+      "felpa nera.webp",
+      "mano baddie bianca.webp",
+      "particolare mano.webp",
+      "particolare scritta.webp",
+      "post1.webp",
+      "post3.webp",
+      "shirtvb1.2.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "ANNA DROP 2",
+    "rotation": 0
+  },
+  "LEFT_POSTER008": {
+    "name": "ANNA Drop 1",
+    "description": "This project involved the graphic direction of the official merchandise for the Italian artist ANNA. Over 25 items were designed and developed in less than three weeks, including clothing and accessories intended for fans and live events. The visual direction combines bold graphics, strong typography and references to contemporary street culture. The goal was to create a cohesive merchandise collection capable of translating the artist’s identity into wearable visual statements. ",
+    "category": "Merchandising / Creative Direction ",
+    "year": "2024",
+    "role": "Graphic Direction",
+    "status": "Completed",
+    "images": [
+      "VB.1.webp",
+      "VB.10.webp",
+      "VB.11.webp",
+      "VB.12.webp",
+      "VB.13-1.webp",
+      "VB.2.webp",
+      "VB.3.webp",
+      "VB.4.webp",
+      "VB.5.webp",
+      "VB.6.webp",
+      "VB.7.webp",
+      "VB.8.webp",
+      "VB.9.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "ANNA DROP 1",
+    "rotation": 0
+  },
+  "LEFT_POSTER009": {
+    "name": "Nitro Merch",
+    "description": "This project involved the development of merchandise graphics for the Italian rapper Nitro. The work included the design of clothing items and visual elements aligned with the artist’s aesthetic and musical identity. The visual direction emphasises strong typography and expressive graphics inspired by contemporary music culture. The aim was to translate the artist’s persona into wearable designs capable of resonating with fans and reinforcing the visual identity of the brand.",
+    "category": "Merchandising",
+    "year": "2025",
+    "role": "Graphic Design / Creative Direction",
+    "status": "Completed",
+    "images": [
+      "2.jpg (1).webp",
+      "3.jpg.webp",
+      "5.jpg.webp",
+      "6.jpg.webp",
+      "post 2.webp",
+      "post 3.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "NITRO",
+    "rotation": 0
+  },
+  "LEFT_POSTER004": {
+    "name": "Sala — “Ogni Musica”",
+    "description": "This project focuses on the development of custom lettering and graphic design for the title Ogni Musica and its official tracklist. The work explores typography as a visual language, creating a strong and recognisable aesthetic through handcrafted lettering and graphic composition. In addition to the typographic design, a series of visual mockups were produced to translate the graphics into potential music-related formats. The objective was to transform the album’s textual elements into a cohesive visual identity. The project was developed with the support of Selim Mattei.",
+    "category": "Typography / Music Visual Design",
+    "year": "2025",
+    "role": "Lettering & Graphic Design",
+    "status": "Completed",
+    "images": [
+      "WhatsApp Image 2026-03-16 at 11.48.52 (1).webp",
+      "WhatsApp Image 2026-03-16 at 11.48.52 (2).webp",
+      "WhatsApp Image 2026-03-16 at 11.48.52.webp",
+      "WhatsApp Image 2026-03-16 at 11.48.53 (1).webp",
+      "WhatsApp Image 2026-03-16 at 11.48.53 (2).webp",
+      "WhatsApp Image 2026-03-16 at 11.48.53 (3).webp",
+      "WhatsApp Image 2026-03-16 at 11.48.53.webp",
+      "WhatsApp Image 2026-03-16 at 11.48.54 (1).webp",
+      "WhatsApp Image 2026-03-16 at 11.48.54.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "SALA",
+    "rotation": 0
+  },
+  "LEFT_POSTER010": {
+    "name": "MULA Art Direction ",
+    "description": "This project involved the artistic direction of visual graphics for MULA, focusing on the development of a coherent visual language across different communication materials. The work included the creation of graphic assets, visual compositions and stylistic guidelines to support the brand’s communication. The goal was to build a recognisable aesthetic capable of connecting multiple visual outputs while maintaining a consistent identity.",
+    "category": "Creative Direction",
+    "year": "2025",
+    "role": "Art Direction",
+    "status": "Completed",
+    "images": [
+      "post 1.webp",
+      "post 2.webp",
+      "post 3.webp",
+      "post 4.webp",
+      "post 5.webp",
+      "post fin.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "MULA",
+    "rotation": 0
   }
 }
