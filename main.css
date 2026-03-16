@@ -49,8 +49,8 @@ body {
     width: calc(100% - 48px);
     max-height: 85vh;
     background: rgba(10, 10, 10, 0.94);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
     color: #f0f0f0;
@@ -121,9 +121,7 @@ body {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: rgba(255, 255, 255, 0.8);
     font-size: 18px;
@@ -229,9 +227,7 @@ body {
 /* ─── Poster Tooltip ─── */
 #poster-tooltip {
     position: fixed;
-    background: rgba(10, 10, 10, 0.85);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(10, 10, 10, 0.9);
     color: rgba(255, 255, 255, 0.9);
     font-family: 'Arial', sans-serif;
     font-size: 12px;
@@ -258,9 +254,7 @@ body {
     transform: translateY(-50%);
     width: 44px;
     height: 72px;
-    background: rgba(10, 10, 10, 0.65);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(10, 10, 10, 0.75);
     border: 1px solid rgba(148, 255, 227, 0.15);
     color: rgba(148, 255, 227, 0.7);
     font-size: 26px;
@@ -299,9 +293,9 @@ body {
     bottom: 40px;
     left: 50%;
     transform: translateX(-50%) translateY(20px);
-    background: rgba(10, 10, 10, 0.9);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(10, 10, 10, 0.92);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     border: 1px solid rgba(148, 255, 227, 0.25);
     border-radius: 30px;
     padding: 12px 24px;
@@ -391,8 +385,8 @@ body {
     max-height: 90vh;
     width: calc(100% - 48px);
     background: rgba(10, 10, 10, 0.94);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(148, 255, 227, 0.15);
     border-radius: 16px;
     color: #f0f0f0;

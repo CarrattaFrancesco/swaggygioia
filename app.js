@@ -39,6 +39,31 @@ let glowClock = new THREE.Clock();
 // Contact card mesh
 let contactMesh = null;
 
+// Cached list of intersectable meshes (rebuilt after model load, not every frame)
+let cachedIntersectableMeshes = [];
+
+// Throttle utility
+function throttle(fn, wait) {
+    let last = 0;
+    return function() {
+        var now = Date.now();
+        if (now - last >= wait) {
+            last = now;
+            fn.apply(this, arguments);
+        }
+    };
+}
+
+// Debounce utility
+function debounce(fn, wait) {
+    let timer;
+    return function() {
+        var ctx = this, args = arguments;
+        clearTimeout(timer);
+        timer = setTimeout(function() { fn.apply(ctx, args); }, wait);
+    };
+}
+
 // WebP support flag (cached)
 let _supportsWebP = null;
 function supportsWebP() {
@@ -337,6 +362,7 @@ function init() {
 
     // Create renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -359,7 +385,7 @@ function init() {
     controls.target.set(0, 0.5, 0);
 
     // Add mouse event listeners
-    renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+    renderer.domElement.addEventListener('mousemove', throttle(onMouseMove, 60), false);
     renderer.domElement.addEventListener('click', onMouseClick, false);
     renderer.domElement.addEventListener('dblclick', onMouseDoubleClick, false);
     renderer.domElement.addEventListener('touchstart', onTouchStart, false);
@@ -373,8 +399,8 @@ function init() {
         loadPhotoboothModel();
     });
 
-    // Handle window resize
-    window.addEventListener('resize', onWindowResize, false);
+    // Handle window resize (debounced to avoid excessive framebuffer reallocation)
+    window.addEventListener('resize', debounce(onWindowResize, 250), false);
 
     // Escape key to close card and reset
     document.addEventListener('keydown', function(e) {
@@ -447,51 +473,37 @@ function init() {
 
 function setupLighting() {
     const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+    ambientLight.layers.enableAll();
     scene.add(ambientLight);
 
     const pointLight = new THREE.PointLight(0xffffff, 3.0, 10);
     pointLight.position.set(0, 0.1, 0);
     pointLight.castShadow = true;
-    pointLight.shadow.mapSize.width = 1024;
-    pointLight.shadow.mapSize.height = 1024;
+    pointLight.shadow.mapSize.width = 512;
+    pointLight.shadow.mapSize.height = 512;
     pointLight.shadow.camera.near = 0.1;
     pointLight.shadow.camera.far = 5;
+    pointLight.layers.enableAll();
     scene.add(pointLight);
 
     const pointLight_purple_1 = new THREE.PointLight(0x6a4c93, 1.0, 10);
     pointLight_purple_1.position.set(-0.4, 0.4, 0.4);
-    pointLight_purple_1.castShadow = true;
-    pointLight_purple_1.shadow.mapSize.width = 1024;
-    pointLight_purple_1.shadow.mapSize.height = 1024;
-    pointLight_purple_1.shadow.camera.near = 0.1;
-    pointLight_purple_1.shadow.camera.far = 5;
+    pointLight_purple_1.layers.enableAll();
     scene.add(pointLight_purple_1);
 
     const pointLight_blue = new THREE.PointLight(0x4a90e2, 1.0, 10);
     pointLight_blue.position.set(0.4, 0.4, 0.4);
-    pointLight_blue.castShadow = true;
-    pointLight_blue.shadow.mapSize.width = 1024;
-    pointLight_blue.shadow.mapSize.height = 1024;
-    pointLight_blue.shadow.camera.near = 0.1;
-    pointLight_blue.shadow.camera.far = 5;
+    pointLight_blue.layers.enableAll();
     scene.add(pointLight_blue);
 
     const pointLight_lightBlue = new THREE.PointLight(0x7fb3d3, 1.0, 10);
     pointLight_lightBlue.position.set(0.4, 0.4, -0.4);
-    pointLight_lightBlue.castShadow = true;
-    pointLight_lightBlue.shadow.mapSize.width = 1024;
-    pointLight_lightBlue.shadow.mapSize.height = 1024;
-    pointLight_lightBlue.shadow.camera.near = 0.1;
-    pointLight_lightBlue.shadow.camera.far = 5;
+    pointLight_lightBlue.layers.enableAll();
     scene.add(pointLight_lightBlue);
 
     const pointLight_violet = new THREE.PointLight(0xffd54f, 0.5, 10);
     pointLight_violet.position.set(-0.4, 0.4, -0.4);
-    pointLight_violet.castShadow = true;
-    pointLight_violet.shadow.mapSize.width = 1024;
-    pointLight_violet.shadow.mapSize.height = 1024;
-    pointLight_violet.shadow.camera.near = 0.1;
-    pointLight_violet.shadow.camera.far = 5;
+    pointLight_violet.layers.enableAll();
     scene.add(pointLight_violet);
 }
 
@@ -540,7 +552,10 @@ function setupPostProcessing() {
     try {
         console.log('Setting up selective bloom for objects:', bloomObjects.length);
 
-        const bloomRenderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
+        // Bloom renders at half resolution for performance (bloom is naturally blurry)
+        var bloomW = Math.round(window.innerWidth * 0.5);
+        var bloomH = Math.round(window.innerHeight * 0.5);
+        const bloomRenderTarget = new THREE.WebGLRenderTarget(bloomW, bloomH);
         const normalRenderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
 
         bloomComposer = new THREE.EffectComposer(renderer, bloomRenderTarget);
@@ -550,7 +565,7 @@ function setupPostProcessing() {
         bloomRenderPass.clear = true;
         
         const bloomPass = new THREE.UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            new THREE.Vector2(bloomW, bloomH),
             bloomStrength,
             bloomRadius,
             bloomThreshold
@@ -773,6 +788,14 @@ function loadPhotoboothModel() {
                         contactMesh = child;
                         child.userData._posterBaseEmissive = child.material.emissive ? child.material.emissive.clone() : new THREE.Color(0);
                         child.userData._posterBaseIntensity = child.material.emissiveIntensity || 0;
+                    }
+                });
+
+                // Cache intersectable meshes for raycasting (avoids traverse on every hover/click)
+                cachedIntersectableMeshes = [];
+                photoboothModel.traverse(function(child) {
+                    if (child.isMesh && child.visible) {
+                        cachedIntersectableMeshes.push(child);
                     }
                 });
             },
@@ -1038,6 +1061,9 @@ function setupBloomObject(meshObject, material, emissionColor, customIntensity =
         material.needsUpdate = true;
         meshObject.userData.hasBloom = true;
         
+        // Assign to both default (0) and bloom (1) layers so it renders in both passes
+        meshObject.layers.enable(1);
+        
         bloomObjects.push({
             original: meshObject,
             clone: null,
@@ -1080,14 +1106,7 @@ function onMouseClick(event) {
     
     raycaster.setFromCamera(mouse, camera);
     
-    const intersectableObjects = [];
-    photoboothModel.traverse(function(child) {
-        if (child.isMesh && child.visible) {
-            intersectableObjects.push(child);
-        }
-    });
-    
-    const intersects = raycaster.intersectObjects(intersectableObjects);
+    const intersects = raycaster.intersectObjects(cachedIntersectableMeshes);
     
     if (intersects.length > 0) {
         const clickedObject = intersects[0].object;
@@ -1139,12 +1158,7 @@ function checkHover(event) {
 
     raycaster.setFromCamera(mouse, camera);
 
-    var intersectableObjects = [];
-    photoboothModel.traverse(function(child) {
-        if (child.isMesh && child.visible) intersectableObjects.push(child);
-    });
-
-    var intersects = raycaster.intersectObjects(intersectableObjects);
+    var intersects = raycaster.intersectObjects(cachedIntersectableMeshes);
     var tooltip = document.getElementById('poster-tooltip');
 
     if (intersects.length > 0) {
@@ -1302,19 +1316,27 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     
     if (bloomComposer && finalComposer) {
-        bloomComposer.setSize(window.innerWidth, window.innerHeight);
+        bloomComposer.setSize(Math.round(window.innerWidth * 0.5), Math.round(window.innerHeight * 0.5));
         finalComposer.setSize(window.innerWidth, window.innerHeight);
     }
 }
 
+// Cached DOM elements for animate loop (avoid per-frame getElementById)
+let _projectCardEl = null;
+let _contactCardEl = null;
+
 function animate() {
     requestAnimationFrame(animate);
+    
+    // Cache DOM references once
+    if (!_projectCardEl) _projectCardEl = document.getElementById('project-card');
+    if (!_contactCardEl) _contactCardEl = document.getElementById('contact-card');
     
     controls.update();
     
     // Poster glow pulse
     var elapsed = glowClock.getElapsedTime();
-    var cardVisible = document.getElementById('project-card').classList.contains('visible');
+    var cardVisible = _projectCardEl && _projectCardEl.classList.contains('visible');
     posterMeshes.forEach(function(mesh) {
         if (cardVisible && mesh === currentPaperMesh) return; // skip focused poster
         if (mesh === hoveredObject) return; // skip hovered poster (highlight takes over)
@@ -1326,7 +1348,7 @@ function animate() {
     });
 
     // Contact card mesh: stronger + faster glow pulse
-    var contactVisible = document.getElementById('contact-card').classList.contains('visible');
+    var contactVisible = _contactCardEl && _contactCardEl.classList.contains('visible');
     if (contactMesh && contactMesh.material && contactMesh.material.emissive) {
         if (contactMesh !== hoveredObject && !contactVisible) {
             var contactPulse = (Math.sin(elapsed * 2.5) + 1) * 0.5; // faster frequency
@@ -1342,31 +1364,15 @@ function animate() {
         }
     });
     
-    bloomObjects.forEach(obj => {
-        if (obj.original) {
-            obj.original.updateMatrixWorld(true);
-        }
-    });
-    
     if (bloomComposer && finalComposer && bloomObjects.length > 0) {
-        const hiddenObjects = [];
-        scene.traverse((child) => {
-            if (child.isMesh && !bloomObjects.some(b => b.original === child)) {
-                if (child.visible) {
-                    child.visible = false;
-                    hiddenObjects.push(child);
-                }
-            }
-        });
-        
+        // Use layers to isolate bloom objects instead of scene traversal
+        camera.layers.set(1); // Only render bloom layer
         bloomComposer.render();
         
-        hiddenObjects.forEach(child => {
-            child.visible = true;
-        });
-        
+        camera.layers.enableAll(); // Render everything for final pass
         finalComposer.render();
     } else {
+        camera.layers.enableAll();
         renderer.render(scene, camera);
     }
 }
@@ -1442,11 +1448,8 @@ function showProjectCard(projectKey) {
         carouselNav.style.display = 'none';
     }
     
-    // Preload all project images for instant navigation (both formats)
-    images.forEach(function(imgFile) {
-        var img = new Image();
-        img.src = toWebP('data/IMG/' + imgFolder + '/' + imgFile);
-    });
+    // Preload only adjacent images for instant navigation (not all at once)
+    preloadAdjacentImages(project, imgFolder, 0);
     
     // Show/hide project navigation arrows (only if more than 1 project)
     var projPrev = document.getElementById('project-prev');
@@ -1505,11 +1508,19 @@ function showContactCard() {
     var tooltip = document.getElementById('poster-tooltip');
     if (tooltip) tooltip.classList.remove('visible');
     dismissOnboarding();
+
+    // Start playing the contact video only when card is shown
+    var contactVideo = document.getElementById('contact-video');
+    if (contactVideo) contactVideo.play().catch(function() {});
 }
 
 function hideContactCard() {
     var contact = document.getElementById('contact-card');
     if (contact) contact.classList.remove('visible');
+
+    // Pause contact video to save resources
+    var contactVideo = document.getElementById('contact-video');
+    if (contactVideo) contactVideo.pause();
     // Only remove backdrop if project card is also hidden
     var projectCard = document.getElementById('project-card');
     if (projectCard && !projectCard.classList.contains('visible')) {
@@ -1572,6 +1583,19 @@ function navigateCarousel(direction) {
         cardImage.src = toWebP('data/IMG/' + imgFolder + '/' + images[currentCarouselIndex]);
     }
     updateCarouselCounter();
+    
+    // Preload adjacent images for smooth navigation
+    preloadAdjacentImages(project, imgFolder, currentCarouselIndex);
+}
+
+function preloadAdjacentImages(project, imgFolder, currentIndex) {
+    var images = project.images;
+    if (!images || images.length <= 1) return;
+    for (var offset = -1; offset <= 1; offset++) {
+        var idx = (currentIndex + offset + images.length) % images.length;
+        var img = new Image();
+        img.src = toWebP('data/IMG/' + imgFolder + '/' + images[idx]);
+    }
 }
 
 function updateCarouselCounter() {
@@ -1730,21 +1754,9 @@ function fitTextureToMesh(texture, mesh, rotationDeg) {
     canvas.height = canvasH;
     var ctx = canvas.getContext('2d');
 
-    // Fill background (matches poster material)
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvasW, canvasH);
-
-    // Contain: fit entire image inside canvas, centered, no crop, no stretch
-    var drawW, drawH;
-    if (imgAspect > canvasW / canvasH) {
-        drawW = canvasW;
-        drawH = canvasW / imgAspect;
-    } else {
-        drawH = canvasH;
-        drawW = canvasH * imgAspect;
-    }
-    var x = (canvasW - drawW) / 2;
-    var y = (canvasH - drawH) / 2;
+    // Stretch: fill entire canvas, stretching the image to match the poster size
+    var drawW = canvasW;
+    var drawH = canvasH;
 
     // Apply rotation around canvas center
     if (rot !== 0) {
@@ -1754,7 +1766,7 @@ function fitTextureToMesh(texture, mesh, rotationDeg) {
         ctx.drawImage(texture.image, -drawW / 2, -drawH / 2, drawW, drawH);
         ctx.restore();
     } else {
-        ctx.drawImage(texture.image, x, y, drawW, drawH);
+        ctx.drawImage(texture.image, 0, 0, drawW, drawH);
     }
 
     // Replace texture with canvas — 1:1 mapping, no repeat/offset tricks

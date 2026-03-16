@@ -135,5 +135,99 @@
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "MULA",
     "rotation": 0
+  },
+  "BACK_POSTER013": {
+    "name": "Shilla Book",
+    "description": "Shilla Book is a short editorial mock-up created to announce a new product drop for the brand Shilla. The project consists of a two-page digital magazine designed specifically for Instagram, combining editorial layout with promotional communication. The design uses bold typography and strong visual hierarchy to transform a simple announcement into a striking visual statement. The goal was to create a format capable of standing out within social media feeds while maintaining an editorial aesthetic.",
+    "category": "Editorial / Social",
+    "year": "2024",
+    "role": "Graphic Design",
+    "status": "Completed",
+    "images": [
+      "SHILLA MAGAZINE 2.webp",
+      "prova1.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "SHILLA BOOK",
+    "rotation": 0
+  },
+  "BACK_POSTER008": {
+    "name": "Shilla Packaging",
+    "description": "This project focuses on the redesign of packaging for Shilla jewellery products, including necklaces and bracelets. Two packaging solutions were developed: a plastic version intended for everyday use and a premium box designed to elevate the product’s perceived value. The visual direction combines minimal design with a refined aesthetic, allowing the packaging to function both as protection and as part of the brand experience. The goal was to balance practicality and premium perception.",
+    "category": "Packaging",
+    "year": "2025",
+    "role": "Graphic Design",
+    "status": "Completed",
+    "images": [
+      "FRONT.webp",
+      "box prov 2.webp",
+      "pack 1.webp",
+      "pack 2.webp",
+      "prov  5.webp",
+      "prova 3.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "SHILLA PACK",
+    "rotation": 0
+  },
+  "BACK_POSTER010": {
+    "name": "Shilla — Necklace & Wallet Chain Posters",
+    "description": "This project focuses on the design of promotional posters created for Shilla to present two jewellery products: a necklace and a wallet chain. The work explores graphic composition and typography to highlight the products while maintaining a strong visual identity aligned with the brand. Through bold layouts and clear visual hierarchy, the posters transform simple product communication into a more expressive visual statement. The objective was to create striking visuals capable of presenting the pieces within a coherent brand aesthetic.",
+    "category": "Graphic Design / Poster Design",
+    "year": "2025",
+    "role": "Graphic Design",
+    "status": "Completed",
+    "images": [
+      "Mockup6.webp",
+      "Shilla poster NECKLACE stampa.webp",
+      "Shilla poster jeans 2.webp",
+      "mockup2.webp",
+      "mockup4.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "SHILLA POSTER",
+    "rotation": 0
+  },
+  "BACK_POSTER": {
+    "name": "Terroni",
+    "description": "Terroni is a conceptual brand project that explores the cultural identity of Southern Italy by reclaiming the word “terrone” and transforming it into a symbol of pride rather than stigma. The project investigates how design can reinterpret stereotypes through visual language, storytelling and branding. Through identity design and conceptual communication, the project reframes the narrative around southern culture. The objective was to transform a historically negative label into a contemporary cultural statement.",
+    "category": "Branding / Cultural Project",
+    "year": "2025",
+    "role": " Concept, Creative Direction & Brand Design",
+    "status": "Completed",
+    "images": [
+      "1.webp",
+      "2.webp",
+      "3.webp",
+      "TERRONI DATE.webp",
+      "TERRONI storia aap 1.webp",
+      "insta logo 3.webp",
+      "logo insta 2.webp",
+      "logo insta.webp",
+      "merch 1.webp",
+      "merch 5.webp",
+      "poster 111.webp",
+      "poster 8.webp",
+      "terroni sticker 45x20.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "TERRONI",
+    "rotation": 0
+  },
+  "BACK_POSTER009": {
+    "name": "MOYOLA",
+    "description": "This project focuses on the creation of a visual identity for Moyola, developed in collaboration with Francesco Buffetta. The work included the design of the brand’s logo and a series of graphic stickers intended to extend the identity into everyday urban environments. The visual language combines bold typography and street-inspired aesthetics to create a recognisable and flexible identity. The goal was to establish a strong and adaptable visual foundation for the brand’s future communication.",
+    "category": "Branding",
+    "year": "2024",
+    "role": "Graphic Design",
+    "status": "Completed",
+    "images": [
+      "img_1.webp",
+      "img_2.webp",
+      "img_3.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "MOYOLA",
+    "rotation": 0
   }
 }
