@@ -1,5 +1,10 @@
-// No-op stub — called by app.js during model load, no longer needed
-function updateLoadingProgress() {}
+// Update the loading bar progress (0–100)
+function updateLoadingProgress(progress) {
+    const fill = document.getElementById('loading-bar-fill');
+    if (fill) {
+        fill.style.width = Math.min(100, Math.max(0, progress)) + '%';
+    }
+}
 
 function hideLoadingScreen() {
     const crtContainer = document.getElementById('crt-container');
@@ -17,5 +22,10 @@ function hideLoadingScreen() {
     // Slide logo to top-left corner
     if (logo) {
         logo.classList.add('corner');
+    }
+    // Hide the loading bar
+    const loadingBar = document.getElementById('loading-bar-container');
+    if (loadingBar) {
+        loadingBar.classList.add('hidden');
     }
 }
