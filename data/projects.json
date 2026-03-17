@@ -13,7 +13,8 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "MOYOLA",
-    "rotation": 0
+    "rotation": 0,
+    "videos": []
   },
   "LEFT_POSTER005": {
     "name": "SAMMI — Street Art Museum Milano",
@@ -27,7 +28,8 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "SAMMI",
-    "rotation": 90
+    "rotation": 90,
+    "videos": []
   },
   "LEFT_POSTER": {
     "name": "ANNA Drop 2",
@@ -48,7 +50,8 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "ANNA DROP 2",
-    "rotation": 0
+    "rotation": 0,
+    "videos": []
   },
   "LEFT_POSTER008": {
     "name": "ANNA Drop 1",
@@ -74,7 +77,8 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "ANNA DROP 1",
-    "rotation": 0
+    "rotation": 0,
+    "videos": []
   },
   "LEFT_POSTER009": {
     "name": "Nitro Merch",
@@ -93,7 +97,13 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "NITRO",
-    "rotation": 0
+    "rotation": 0,
+    "videos": [
+      {
+        "file": "animazione nitro-_compressed.mp4",
+        "thumbnail": "animazione nitro-_thumb.webp"
+      }
+    ]
   },
   "LEFT_POSTER004": {
     "name": "Sala — “Ogni Musica”",
@@ -115,7 +125,8 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "SALA",
-    "rotation": 0
+    "rotation": 0,
+    "videos": []
   },
   "LEFT_POSTER010": {
     "name": "MULA Art Direction ",
@@ -134,7 +145,8 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "MULA",
-    "rotation": 0
+    "rotation": 0,
+    "videos": []
   },
   "BACK_POSTER013": {
     "name": "Shilla Book",
@@ -149,7 +161,8 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "SHILLA BOOK",
-    "rotation": 0
+    "rotation": 0,
+    "videos": []
   },
   "BACK_POSTER008": {
     "name": "Shilla Packaging",
@@ -168,7 +181,8 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "SHILLA PACK",
-    "rotation": 0
+    "rotation": 0,
+    "videos": []
   },
   "BACK_POSTER010": {
     "name": "Shilla — Necklace & Wallet Chain Posters",
@@ -186,7 +200,8 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "SHILLA POSTER",
-    "rotation": 0
+    "rotation": 0,
+    "videos": []
   },
   "BACK_POSTER": {
     "name": "Terroni",
@@ -212,7 +227,8 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "TERRONI",
-    "rotation": 0
+    "rotation": 90,
+    "videos": []
   },
   "BACK_POSTER009": {
     "name": "MOYOLA",
@@ -228,6 +244,179 @@
     ],
     "backdropColor": "rgba(0, 0, 0, 0.55)",
     "folder_name": "MOYOLA",
-    "rotation": 0
+    "rotation": 0,
+    "videos": []
+  },
+  "BACK_POSTER011": {
+    "name": "Frantoju",
+    "description": "Frantoju is a university project centred on the creation of a brand identity for an olive oil product. The project includes the design of the logo, packaging, label and communication brochure. The visual language draws inspiration from Mediterranean culture and the traditions of olive oil production, translating them into a contemporary graphic system. The objective was to create a coherent brand identity capable of connecting heritage, product quality and modern design.",
+    "category": "Branding / Packaging",
+    "year": "2025",
+    "role": " Brand Design",
+    "status": "Completed",
+    "images": [
+      "ChatGPT Image Mar 17, 2026, 08_25_03 AM.webp",
+      "ChatGPT Image Mar 17, 2026, 08_28_03 AM.webp",
+      "bottle.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "FRANTOJU",
+    "rotation": 0,
+    "videos": []
+  },
+  "BACK_POSTER005": {
+    "name": "Le Comptoir / L’Entr’acte",
+    "description": "This project focuses on the development of visual identity elements for hospitality environments. The work explores how graphic design can shape the atmosphere of restaurants and social spaces through visual communication. The design approach combines elegant typography with refined graphic compositions. The objective was to build a visual language capable of reinforcing the identity of the space while enhancing the overall experience.",
+    "category": "Branding",
+    "year": "2025",
+    "role": "Brand Design",
+    "status": "Completed",
+    "images": [
+      "1.webp",
+      "3.webp",
+      "4.webp",
+      "5.webp",
+      "8.webp",
+      "WhatsApp Image 2026-03-16 at 11.08.54 (1).webp",
+      "WhatsApp Image 2026-03-16 at 11.08.56 (1).webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "LE COMPTOIR",
+    "rotation": 90,
+    "videos": []
+  },
+  "RIGHT_POSTER002": {
+    "name": "MULA Website UX/UI",
+    "description": "This project focuses on the design of the UX and UI for the MULA website. The work involved structuring the user experience and designing a clean visual interface that reflects the brand’s identity. Particular attention was given to navigation clarity, layout hierarchy and visual consistency. The goal was to create a digital platform capable of communicating the brand while providing a smooth and intuitive user experience.",
+    "category": "UX/UI Design",
+    "year": "2025",
+    "role": "UX/UI Designer",
+    "status": "Completed",
+    "images": [
+      "video_thumb.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "UX UI MULA",
+    "rotation": 0,
+    "videos": [
+      {
+        "file": "video_compressed.mp4",
+        "thumbnail": "video_thumb.webp"
+      }
+    ]
+  },
+  "RIGHT_POSTER006": {
+    "name": "Dazed Photography Project",
+    "description": "This photography project explores fashion imagery inspired by the visual language of contemporary editorial magazines such as Dazed. Developed during a university course together with Selim, the work investigates styling, composition and atmosphere to create a series of visually striking photographs. The aesthetic combines experimental lighting and expressive poses. The goal was to explore how fashion photography can construct strong visual narratives through image-based storytelling.",
+    "category": "Photography",
+    "year": "2025",
+    "role": "Photography / Creative Direction",
+    "status": "Completed",
+    "images": [
+      "Gioia_Carratta_ritratto-1_page1.webp",
+      "Gioia_Carratta_ritratto-2_page1.webp",
+      "Gioia_Carratta_ritratto-3_page1.webp",
+      "Gioia_Carratta_ritratto-4_page1.webp",
+      "Gioia_Carratta_ritratto-5_page1.webp",
+      "Gioia_Carratta_ritratto-6_page1.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "DAZED",
+    "rotation": 0,
+    "videos": []
+  },
+  "RIGHT_POSTER008": {
+    "name": "Small World",
+    "description": "Small World is a photographic exploration focused on observing everyday environments from unusual perspectives. The project investigates how scale, framing and composition can transform familiar spaces into unexpected visual narratives. Through a series of carefully constructed images, the work encourages viewers to reconsider ordinary environments. The objective was to highlight how photography can alter perception by shifting attention toward overlooked details.",
+    "category": "Photography",
+    "year": "2026",
+    "role": "Photography",
+    "status": "Completed",
+    "images": [
+      "DSC01420.webp",
+      "DSC01432.webp",
+      "DSC01439.webp",
+      "DSC01443.webp",
+      "DSC01447.webp",
+      "DSC01463.webp",
+      "DSC01475.webp",
+      "DSC01600.webp",
+      "DSC01652.webp",
+      "DSC01657.webp",
+      "DSC01665.webp",
+      "DSC01677.webp",
+      "DSC01694.webp",
+      "DSC01707.webp",
+      "DSC01709.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "SMALL WORLD",
+    "rotation": 0,
+    "videos": []
+  },
+  "RIGHT_POSTER007": {
+    "name": "Tryless",
+    "description": "Tryless is a conceptual digital product designed to help users manage their wardrobe through a simplified interface. The project proposes an AI-assisted system capable of suggesting outfits, tracking clothing usage and helping organise everyday dressing decisions. The design combines fashion culture with digital product thinking. The objective was to create a tool that reduces decision fatigue while transforming wardrobe management into a more intuitive experience.",
+    "category": "Digital Product / UX",
+    "year": "2025",
+    "role": "Product Concept & UX Design",
+    "status": "Completed",
+    "images": [
+      "1.webp",
+      "2.webp",
+      "3.webp",
+      "4.webp",
+      "5.webp",
+      "6.webp",
+      "7.webp",
+      "8.webp",
+      "9.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "TRYLESS",
+    "rotation": 0,
+    "videos": []
+  },
+  "RIGHT_POSTER005": {
+    "name": "Cheat Fit",
+    "description": "Cheat Fit is a conceptual brand project exploring the intersection between fitness culture and fast food. The project proposes a brand identity for a fast food concept designed for people who train but still want to enjoy indulgent meals. The visual language combines athletic aesthetics with bold food branding. The objective was to challenge the typical opposition between discipline and pleasure within contemporary fitness culture.",
+    "category": "Branding Concept",
+    "year": "2025",
+    "role": "Creative Direction",
+    "status": "Completed",
+    "images": [
+      "1.webp",
+      "10.webp",
+      "4.webp",
+      "5.webp",
+      "6.webp",
+      "7.webp",
+      "8.webp",
+      "9.webp",
+      "Copy of brand aw drive to store (1).webp",
+      "Copy of brand aw drive to store (2).webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "CHEAT FIT",
+    "rotation": 90,
+    "videos": []
+  },
+  "RIGHT_POSTER011": {
+    "name": "Coca-Cola Campaign",
+    "description": "This project proposes a speculative advertising campaign for Coca-Cola developed as a creative exploration of brand communication. The concept builds on the brand’s iconic identity while introducing a contemporary visual language. Through graphic storytelling and bold visual compositions, the campaign reinterprets the brand’s cultural presence. The objective was to explore how a globally recognised brand can be reimagined through fresh creative direction.",
+    "category": "Advertising Campaign",
+    "year": "2025",
+    "role": "Creative Direction",
+    "status": "Completed",
+    "images": [
+      "55.webp",
+      "56.webp",
+      "57.webp",
+      "58.webp"
+    ],
+    "backdropColor": "rgba(0, 0, 0, 0.55)",
+    "folder_name": "Coca-cola",
+    "rotation": 0,
+    "videos": []
   }
 }

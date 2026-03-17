@@ -31,6 +31,7 @@ window.projectsData = {};
 let currentCarouselIndex = 0;
 let currentPaperKey = null;
 let currentPaperMesh = null;
+let currentMediaItems = []; // unified list of {type, file, thumbnail?}
 
 // Poster glow pulse state
 let posterMeshes = [];
@@ -1422,22 +1423,28 @@ function showProjectCard(projectKey) {
         counterEl.textContent = 'Project ' + (idx + 1) + ' / ' + projectKeys.length;
     }
     
-    // Load first image into the card (prefer WebP if supported)
+    // Build unified media list: images first, then videos at the end
     var images = project.images || [];
+    var videos = project.videos || [];
     var imgFolder = project.folder_name || projectKey;
-    var cardImage = document.getElementById('card-image');
-    if (images.length > 0) {
-        cardImage.src = toWebP('data/IMG/' + imgFolder + '/' + images[0]);
-        cardImage.style.display = 'block';
-    } else {
-        cardImage.style.display = 'none';
+    currentMediaItems = [];
+    for (var i = 0; i < images.length; i++) {
+        currentMediaItems.push({ type: 'image', file: images[i] });
     }
-    
+    for (var v = 0; v < videos.length; v++) {
+        currentMediaItems.push({ type: 'video', file: videos[v].file, thumbnail: videos[v].thumbnail });
+    }
+
+    // Display first media item
+    var cardImage = document.getElementById('card-image');
+    var cardVideo = document.getElementById('card-video');
+    showMediaItem(currentMediaItems[0] || null, imgFolder, cardImage, cardVideo);
+
     // Show/hide carousel arrows inside card
     var prevBtn = document.getElementById('carousel-prev');
     var nextBtn = document.getElementById('carousel-next');
     var carouselNav = document.getElementById('card-carousel-nav');
-    if (images.length > 1) {
+    if (currentMediaItems.length > 1) {
         prevBtn.classList.add('visible');
         nextBtn.classList.add('visible');
         carouselNav.style.display = 'flex';
@@ -1447,9 +1454,9 @@ function showProjectCard(projectKey) {
         nextBtn.classList.remove('visible');
         carouselNav.style.display = 'none';
     }
-    
+
     // Preload only adjacent images for instant navigation (not all at once)
-    preloadAdjacentImages(project, imgFolder, 0);
+    preloadAdjacentMedia(currentMediaItems, imgFolder, 0);
     
     // Show/hide project navigation arrows (only if more than 1 project)
     var projPrev = document.getElementById('project-prev');
@@ -1492,7 +1499,15 @@ function hideProjectCard() {
     var projNext = document.getElementById('project-next');
     if (projPrev) projPrev.classList.remove('visible');
     if (projNext) projNext.classList.remove('visible');
+    // Pause and reset any playing video
+    var cardVideo = document.getElementById('card-video');
+    if (cardVideo) {
+        cardVideo.pause();
+        cardVideo.removeAttribute('src');
+        cardVideo.style.display = 'none';
+    }
     currentCarouselIndex = 0;
+    currentMediaItems = [];
 }
 
 // --- Contact card functions ---
@@ -1562,7 +1577,7 @@ function flyToCardAndShowContact() {
 
 function initCarousel(paperKey, meshObject) {
     var project = window.projectsData[paperKey];
-    if (!project || !project.images || project.images.length === 0) return;
+    if (!project) return;
     
     currentCarouselIndex = 0;
     currentPaperKey = paperKey;
@@ -1570,40 +1585,66 @@ function initCarousel(paperKey, meshObject) {
     updateCarouselCounter();
 }
 
-function navigateCarousel(direction) {
-    var project = window.projectsData[currentPaperKey];
-    if (!project || !project.images || project.images.length <= 1) return;
-    
-    var images = project.images;
-    currentCarouselIndex = (currentCarouselIndex + direction + images.length) % images.length;
-    
-    var imgFolder = project.folder_name || currentPaperKey;
-    var cardImage = document.getElementById('card-image');
-    if (cardImage) {
-        cardImage.src = toWebP('data/IMG/' + imgFolder + '/' + images[currentCarouselIndex]);
+// Show a single media item (image or video) in the card area
+function showMediaItem(item, imgFolder, cardImage, cardVideo) {
+    if (!item) {
+        cardImage.style.display = 'none';
+        cardVideo.style.display = 'none';
+        return;
     }
+    if (item.type === 'video') {
+        cardImage.style.display = 'none';
+        cardVideo.src = 'data/IMG/' + imgFolder + '/' + item.file;
+        if (item.thumbnail) {
+            cardVideo.poster = 'data/IMG/' + imgFolder + '/' + item.thumbnail;
+        }
+        cardVideo.style.display = 'block';
+    } else {
+        // Pause any playing video first
+        cardVideo.pause();
+        cardVideo.style.display = 'none';
+        cardImage.src = toWebP('data/IMG/' + imgFolder + '/' + item.file);
+        cardImage.style.display = 'block';
+    }
+}
+
+function navigateCarousel(direction) {
+    if (!currentMediaItems || currentMediaItems.length <= 1) return;
+    
+    // Pause current video before navigating away
+    var cardVideo = document.getElementById('card-video');
+    if (cardVideo) cardVideo.pause();
+
+    currentCarouselIndex = (currentCarouselIndex + direction + currentMediaItems.length) % currentMediaItems.length;
+    
+    var project = window.projectsData[currentPaperKey];
+    var imgFolder = project ? (project.folder_name || currentPaperKey) : currentPaperKey;
+    var cardImage = document.getElementById('card-image');
+    showMediaItem(currentMediaItems[currentCarouselIndex], imgFolder, cardImage, cardVideo);
     updateCarouselCounter();
     
     // Preload adjacent images for smooth navigation
-    preloadAdjacentImages(project, imgFolder, currentCarouselIndex);
+    preloadAdjacentMedia(currentMediaItems, imgFolder, currentCarouselIndex);
 }
 
-function preloadAdjacentImages(project, imgFolder, currentIndex) {
-    var images = project.images;
-    if (!images || images.length <= 1) return;
+function preloadAdjacentMedia(mediaItems, imgFolder, currentIndex) {
+    if (!mediaItems || mediaItems.length <= 1) return;
     for (var offset = -1; offset <= 1; offset++) {
-        var idx = (currentIndex + offset + images.length) % images.length;
-        var img = new Image();
-        img.src = toWebP('data/IMG/' + imgFolder + '/' + images[idx]);
+        var idx = (currentIndex + offset + mediaItems.length) % mediaItems.length;
+        var item = mediaItems[idx];
+        // Only preload images, not videos
+        if (item.type === 'image') {
+            var img = new Image();
+            img.src = toWebP('data/IMG/' + imgFolder + '/' + item.file);
+        }
     }
 }
 
 function updateCarouselCounter() {
-    var project = window.projectsData[currentPaperKey];
-    if (!project || !project.images) return;
+    if (!currentMediaItems || currentMediaItems.length === 0) return;
     var counter = document.getElementById('carousel-counter');
     if (counter) {
-        counter.textContent = (currentCarouselIndex + 1) + ' / ' + project.images.length;
+        counter.textContent = (currentCarouselIndex + 1) + ' / ' + currentMediaItems.length;
     }
 }
 

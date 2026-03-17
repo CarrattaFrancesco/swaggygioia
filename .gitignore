@@ -4,6 +4,15 @@
 data/IMG/**/*.png
 data/IMG/**/*.jpeg
 data/IMG/**/*.jpg
+data/IMG/**/*.pdf
+
+# Video originals (keep compressed versions)
+data/IMG/**/*.mov
+data/IMG/**/*.avi
+data/IMG/**/*.mkv
+# Exclude original mp4s but keep _compressed.mp4 via negation
+data/IMG/**/*.mp4
+!data/IMG/**/*_compressed.mp4
 
 # ──────────────────────────────────────────────
 # HDR environment maps (feature disabled in code)
@@ -48,3 +57,4 @@ __pycache__/
 *.swo
 *~
 *.log
+*TEMP_MPY*

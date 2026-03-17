@@ -113,6 +113,14 @@ body {
     display: block;
 }
 
+#card-video {
+    width: 100%;
+    max-height: 420px;
+    object-fit: contain;
+    display: none;
+    background: #000;
+}
+
 /* ─── In-Card Carousel Arrows ─── */
 .card-carousel-arrow {
     position: absolute;
