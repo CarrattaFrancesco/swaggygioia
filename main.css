@@ -469,6 +469,14 @@ body {
     color: #fff;
 }
 
+#contact-bio {
+    margin: 0 0 20px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: left;
+}
+
 #contact-links {
     display: flex;
     flex-direction: column;
