@@ -1842,8 +1842,10 @@ function fitTextureToMesh(texture, mesh, rotationDeg) {
     }
     console.log('fitTexture:', mesh.name, 'img:', imgW + 'x' + imgH, 'meshAspect:', meshAspect.toFixed(3));
 
-    // Canvas sized to preserve image quality
-    var canvasSize = Math.max(imgW, imgH, 1024);
+    // Cap poster texture size — poster surfaces are small, full-res images waste GPU memory
+    // Mobile: 512px max, Desktop: 1024px max (was unbounded before, causing OOM crashes)
+    var maxPosterTexSize = IS_MOBILE ? 512 : 1024;
+    var canvasSize = Math.min(Math.max(imgW, imgH, 512), maxPosterTexSize);
     var canvasW, canvasH;
     if (meshAspect >= 1) {
         canvasW = canvasSize;
