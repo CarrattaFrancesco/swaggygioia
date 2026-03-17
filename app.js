@@ -1,13 +1,3 @@
-// Mobile detection (cached at startup)
-var IS_MOBILE = (function() {
-    var ua = navigator.userAgent || '';
-    var isMobileUA = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-    var isCoarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    var isSmallScreen = Math.max(window.screen.width, window.screen.height) <= 1024;
-    return isMobileUA || (isCoarse && isSmallScreen);
-})();
-if (IS_MOBILE) console.log('Mobile device detected — using optimized rendering');
-
 // Scene setup
 let scene, camera, renderer, controls;
 let photoboothModel;
@@ -371,15 +361,15 @@ function init() {
     camera.position.set(2, 2, 3);
     camera.layers.enableAll();
 
-    // Create renderer (mobile: disable antialiasing, shadows, cap pixel ratio to 1)
+    // Create renderer
     renderer = new THREE.WebGLRenderer({
-        antialias: !IS_MOBILE,
-        powerPreference: IS_MOBILE ? 'high-performance' : 'default'
+        antialias: true,
+        powerPreference: 'high-performance'
     });
-    renderer.setPixelRatio(IS_MOBILE ? 1 : Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = !IS_MOBILE;
-    if (!IS_MOBILE) renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.8;
@@ -486,45 +476,39 @@ function init() {
 }
 
 function setupLighting() {
-    // Mobile: ambient + 1 main point light only (accent lights invisible without bloom)
-    var ambientIntensity = IS_MOBILE ? 0.9 : 0.6;
-    const ambientLight = new THREE.AmbientLight(0x404040, ambientIntensity);
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
     ambientLight.layers.enableAll();
     scene.add(ambientLight);
 
     const pointLight = new THREE.PointLight(0xffffff, 3.0, 10);
     pointLight.position.set(0, 0.1, 0);
-    if (!IS_MOBILE) {
-        pointLight.castShadow = true;
-        pointLight.shadow.mapSize.width = 512;
-        pointLight.shadow.mapSize.height = 512;
-        pointLight.shadow.camera.near = 0.1;
-        pointLight.shadow.camera.far = 5;
-    }
+    pointLight.castShadow = true;
+    pointLight.shadow.mapSize.width = 512;
+    pointLight.shadow.mapSize.height = 512;
+    pointLight.shadow.camera.near = 0.1;
+    pointLight.shadow.camera.far = 5;
     pointLight.layers.enableAll();
     scene.add(pointLight);
 
-    if (!IS_MOBILE) {
-        const pointLight_purple_1 = new THREE.PointLight(0x6a4c93, 1.0, 10);
-        pointLight_purple_1.position.set(-0.4, 0.4, 0.4);
-        pointLight_purple_1.layers.enableAll();
-        scene.add(pointLight_purple_1);
+    const pointLight_purple_1 = new THREE.PointLight(0x6a4c93, 1.0, 10);
+    pointLight_purple_1.position.set(-0.4, 0.4, 0.4);
+    pointLight_purple_1.layers.enableAll();
+    scene.add(pointLight_purple_1);
 
-        const pointLight_blue = new THREE.PointLight(0x4a90e2, 1.0, 10);
-        pointLight_blue.position.set(0.4, 0.4, 0.4);
-        pointLight_blue.layers.enableAll();
-        scene.add(pointLight_blue);
+    const pointLight_blue = new THREE.PointLight(0x4a90e2, 1.0, 10);
+    pointLight_blue.position.set(0.4, 0.4, 0.4);
+    pointLight_blue.layers.enableAll();
+    scene.add(pointLight_blue);
 
-        const pointLight_lightBlue = new THREE.PointLight(0x7fb3d3, 1.0, 10);
-        pointLight_lightBlue.position.set(0.4, 0.4, -0.4);
-        pointLight_lightBlue.layers.enableAll();
-        scene.add(pointLight_lightBlue);
+    const pointLight_lightBlue = new THREE.PointLight(0x7fb3d3, 1.0, 10);
+    pointLight_lightBlue.position.set(0.4, 0.4, -0.4);
+    pointLight_lightBlue.layers.enableAll();
+    scene.add(pointLight_lightBlue);
 
-        const pointLight_violet = new THREE.PointLight(0xffd54f, 0.5, 10);
-        pointLight_violet.position.set(-0.4, 0.4, -0.4);
-        pointLight_violet.layers.enableAll();
-        scene.add(pointLight_violet);
-    }
+    const pointLight_violet = new THREE.PointLight(0xffd54f, 0.5, 10);
+    pointLight_violet.position.set(-0.4, 0.4, -0.4);
+    pointLight_violet.layers.enableAll();
+    scene.add(pointLight_violet);
 }
 
 function loadEnvironmentMap() {
@@ -569,13 +553,6 @@ function createEnvironmentScene() {
 }
 
 function setupPostProcessing() {
-    // Skip bloom entirely on mobile — single render pass is enough
-    if (IS_MOBILE) {
-        console.log('Mobile: bloom disabled for performance');
-        bloomComposer = null;
-        finalComposer = null;
-        return;
-    }
     try {
         console.log('Setting up selective bloom for objects:', bloomObjects.length);
 
@@ -701,22 +678,6 @@ function preloadTextures() {
                         texture.encoding = THREE.sRGBEncoding;
                         texture.flipY = false;
                         
-                        // Mobile: skip mipmaps and downscale large textures to save GPU memory
-                        if (IS_MOBILE) {
-                            texture.generateMipmaps = false;
-                            texture.minFilter = THREE.LinearFilter;
-                            var maxSize = 1024;
-                            if (texture.image && (texture.image.width > maxSize || texture.image.height > maxSize)) {
-                                var scale = maxSize / Math.max(texture.image.width, texture.image.height);
-                                var w = Math.round(texture.image.width * scale);
-                                var h = Math.round(texture.image.height * scale);
-                                var c = document.createElement('canvas');
-                                c.width = w; c.height = h;
-                                c.getContext('2d').drawImage(texture.image, 0, 0, w, h);
-                                texture.image = c;
-                                texture.needsUpdate = true;
-                            }
-                        }
                         
                         loadedTexturesCache.set(path, texture);
                         texturesLoaded++;
@@ -770,8 +731,8 @@ function loadPhotoboothModel() {
                 updateLoadingProgress(80);
                 photoboothModel.traverse(function(child) {
                     if (child.isMesh) {
-                        child.castShadow = !IS_MOBILE;
-                        child.receiveShadow = !IS_MOBILE;
+                        child.castShadow = true;
+                        child.receiveShadow = true;
                     }
                 });
                 
@@ -1360,7 +1321,7 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     
-    if (!IS_MOBILE && bloomComposer && finalComposer) {
+    if (bloomComposer && finalComposer) {
         bloomComposer.setSize(Math.round(window.innerWidth * 0.5), Math.round(window.innerHeight * 0.5));
         finalComposer.setSize(window.innerWidth, window.innerHeight);
     }
@@ -1379,45 +1340,27 @@ function animate() {
     
     controls.update();
     
-    // Poster glow pulse (mobile: static glow, desktop: animated pulse)
+    // Poster glow pulse
     var cardVisible = _projectCardEl && _projectCardEl.classList.contains('visible');
-    if (IS_MOBILE) {
-        // Static glow — set once per frame, no Math.sin per poster
-        for (var pi = 0; pi < posterMeshes.length; pi++) {
-            var mesh = posterMeshes[pi];
-            if (cardVisible && mesh === currentPaperMesh) continue;
-            if (mesh === hoveredObject) continue;
-            if (mesh.material && mesh.material.emissive) {
-                mesh.material.emissive.setHex(0x94ffe3);
-                mesh.material.emissiveIntensity = 0.06;
-            }
-        }
-    } else {
-        var elapsed = glowClock.getElapsedTime();
-        var pulse = (Math.sin(elapsed * 2.0) + 1) * 0.5; // compute once, reuse
-        for (var pi = 0; pi < posterMeshes.length; pi++) {
-            var mesh = posterMeshes[pi];
-            if (cardVisible && mesh === currentPaperMesh) continue;
-            if (mesh === hoveredObject) continue;
-            if (mesh.material && mesh.material.emissive) {
-                mesh.material.emissive.setHex(0x94ffe3);
-                mesh.material.emissiveIntensity = pulse * 0.12;
-            }
+    var elapsed = glowClock.getElapsedTime();
+    var pulse = (Math.sin(elapsed * 2.0) + 1) * 0.5;
+    for (var pi = 0; pi < posterMeshes.length; pi++) {
+        var mesh = posterMeshes[pi];
+        if (cardVisible && mesh === currentPaperMesh) continue;
+        if (mesh === hoveredObject) continue;
+        if (mesh.material && mesh.material.emissive) {
+            mesh.material.emissive.setHex(0x94ffe3);
+            mesh.material.emissiveIntensity = pulse * 0.12;
         }
     }
 
-    // Contact card mesh: glow pulse (desktop) or static (mobile)
+    // Contact card mesh: glow pulse
     var contactVisible = _contactCardEl && _contactCardEl.classList.contains('visible');
     if (contactMesh && contactMesh.material && contactMesh.material.emissive) {
         if (contactMesh !== hoveredObject && !contactVisible) {
-            if (IS_MOBILE) {
-                contactMesh.material.emissive.setHex(0x94ffe3);
-                contactMesh.material.emissiveIntensity = 0.12;
-            } else {
-                var contactPulse = (Math.sin((elapsed || glowClock.getElapsedTime()) * 2.5) + 1) * 0.5;
-                contactMesh.material.emissive.setHex(0x94ffe3);
-                contactMesh.material.emissiveIntensity = contactPulse * 0.25;
-            }
+            var contactPulse = (Math.sin(elapsed * 2.5) + 1) * 0.5;
+            contactMesh.material.emissive.setHex(0x94ffe3);
+            contactMesh.material.emissiveIntensity = contactPulse * 0.25;
         }
     }
     
@@ -1843,8 +1786,7 @@ function fitTextureToMesh(texture, mesh, rotationDeg) {
     console.log('fitTexture:', mesh.name, 'img:', imgW + 'x' + imgH, 'meshAspect:', meshAspect.toFixed(3));
 
     // Cap poster texture size — poster surfaces are small, full-res images waste GPU memory
-    // Mobile: 512px max, Desktop: 1024px max (was unbounded before, causing OOM crashes)
-    var maxPosterTexSize = IS_MOBILE ? 512 : 1024;
+    var maxPosterTexSize = 1024;
     var canvasSize = Math.min(Math.max(imgW, imgH, 512), maxPosterTexSize);
     var canvasW, canvasH;
     if (meshAspect >= 1) {
