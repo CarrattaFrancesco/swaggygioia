@@ -1,10 +1,5 @@
-// Update the loading bar progress (0–100)
-function updateLoadingProgress(progress) {
-    const fill = document.getElementById('loading-bar-fill');
-    if (fill) {
-        fill.style.width = Math.min(100, Math.max(0, progress)) + '%';
-    }
-}
+// No-op: loading bar removed
+function updateLoadingProgress(progress) {}
 
 function hideLoadingScreen() {
     const crtContainer = document.getElementById('crt-container');
@@ -23,9 +18,5 @@ function hideLoadingScreen() {
     if (logo) {
         logo.classList.add('corner');
     }
-    // Hide the loading bar
-    const loadingBar = document.getElementById('loading-bar-container');
-    if (loadingBar) {
-        loadingBar.classList.add('hidden');
-    }
+
 }

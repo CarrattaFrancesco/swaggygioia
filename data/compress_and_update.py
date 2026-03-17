@@ -27,13 +27,19 @@ VIDEO_EXTENSIONS = ('.mp4', '.mov', '.avi', '.mkv')
 PDF_EXTENSIONS = ('.pdf',)
 
 
-def compress_to_webp(input_path, output_path, quality=90):
-    """Convert an image to WebP."""
+def compress_to_webp(input_path, output_path, quality=90, max_size=None):
+    """Convert an image to WebP, optionally capping the largest dimension."""
     img = Image.open(input_path)
     if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
         img = img.convert('RGBA')
     else:
         img = img.convert('RGB')
+    # Resize if larger than max_size (preserving aspect ratio)
+    if max_size and max(img.size) > max_size:
+        w, h = img.size
+        scale = max_size / max(w, h)
+        new_w, new_h = round(w * scale), round(h * scale)
+        img = img.resize((new_w, new_h), Image.LANCZOS)
     img.save(output_path, 'WEBP', quality=quality, method=6)
 
 
@@ -83,7 +89,7 @@ def convert_pdf_to_webp(pdf_path, output_dir, quality=90):
     return generated
 
 
-def process_folders(img_root, quality=90, dry_run=False):
+def process_folders(img_root, quality=90, max_size=None, dry_run=False):
     """Walk data/IMG/*/, process all media, return (folder_images, folder_videos) dicts."""
     folder_images = {}
     folder_videos = {}
@@ -107,9 +113,20 @@ def process_folders(img_root, quality=90, dry_run=False):
                 if not dry_run:
                     if not os.path.exists(webp_path):
                         print(f"  Converting: {folder_name}/{filename} -> {webp_name}")
-                        compress_to_webp(os.path.join(folder_path, filename), webp_path, quality)
+                        compress_to_webp(os.path.join(folder_path, filename), webp_path, quality, max_size)
                     else:
-                        print(f"  Exists:     {folder_name}/{webp_name}")
+                        # Re-compress if existing webp is oversized and --max-size is set
+                        if max_size:
+                            existing = Image.open(webp_path)
+                            if max(existing.size) > max_size:
+                                print(f"  Resizing:   {folder_name}/{webp_name} ({existing.size[0]}x{existing.size[1]} -> max {max_size})")
+                                existing.close()
+                                compress_to_webp(webp_path, webp_path, quality, max_size)
+                            else:
+                                existing.close()
+                                print(f"  OK:         {folder_name}/{webp_name} ({existing.size[0]}x{existing.size[1]})")
+                        else:
+                            print(f"  Exists:     {folder_name}/{webp_name}")
                 else:
                     print(f"  [DRY-RUN]   {folder_name}/{filename} -> {webp_name}")
                 webp_files.append(webp_name)
@@ -142,16 +159,40 @@ def process_folders(img_root, quality=90, dry_run=False):
                     'thumbnail': thumb_name,
                 })
 
+            # --- Existing WebP-only files (no PNG/JPG source) — resize if oversized ---
+            elif ext_lower == '.webp':
+                # Check if a source image exists (skip if the IMAGE_EXTENSIONS block already handles it)
+                has_source = any(
+                    os.path.exists(os.path.join(folder_path, name + src_ext))
+                    for src_ext in IMAGE_EXTENSIONS
+                )
+                if not has_source:
+                    if not dry_run and max_size:
+                        existing = Image.open(os.path.join(folder_path, filename))
+                        if max(existing.size) > max_size:
+                            print(f"  Resizing:   {folder_name}/{filename} ({existing.size[0]}x{existing.size[1]} -> max {max_size})")
+                            existing.close()
+                            compress_to_webp(os.path.join(folder_path, filename), os.path.join(folder_path, filename), quality, max_size)
+                        else:
+                            existing.close()
+                            print(f"  OK:         {folder_name}/{filename} ({existing.size[0]}x{existing.size[1]})")
+                    elif dry_run and max_size:
+                        print(f"  [DRY-RUN]   {folder_name}/{filename} (would check size)")
+                    webp_files.append(filename)
+
             # --- PDFs ---
             elif ext_lower in PDF_EXTENSIONS:
                 if not dry_run:
-                    print(f"  Converting PDF: {folder_name}/{filename}")
-                    pages = convert_pdf_to_webp(
-                        os.path.join(folder_path, filename), folder_path, quality
-                    )
-                    webp_files.extend(pages)
-                    for p in pages:
-                        print(f"    -> {p}")
+                    try:
+                        print(f"  Converting PDF: {folder_name}/{filename}")
+                        pages = convert_pdf_to_webp(
+                            os.path.join(folder_path, filename), folder_path, quality
+                        )
+                        webp_files.extend(pages)
+                        for p in pages:
+                            print(f"    -> {p}")
+                    except ImportError:
+                        print(f"  Skipping PDF (PyMuPDF not installed): {folder_name}/{filename}")
                 else:
                     # Estimate page count from PDF for dry-run reporting
                     try:
@@ -230,6 +271,8 @@ def main():
         description='Compress images/videos to web formats, convert PDFs, and update projects.json'
     )
     parser.add_argument('--quality', type=int, default=90, help='WebP quality (default: 90)')
+    parser.add_argument('--max-size', type=int, default=None,
+                        help='Cap largest image dimension to this value in pixels (e.g. 1920)')
     parser.add_argument('--dry-run', action='store_true', help='Preview without writing any files')
     args = parser.parse_args()
 
@@ -244,11 +287,11 @@ def main():
         print(f"ERROR: projects.json not found: {json_path}")
         sys.exit(1)
 
-    print(f"Media compression — quality: {args.quality}")
+    print(f"Media compression — quality: {args.quality}, max-size: {args.max_size or 'unlimited'}")
     print(f"Source: {img_root}\n")
 
     print("=== Processing media files ===")
-    folder_images, folder_videos = process_folders(img_root, quality=args.quality, dry_run=args.dry_run)
+    folder_images, folder_videos = process_folders(img_root, quality=args.quality, max_size=args.max_size, dry_run=args.dry_run)
 
     print("\n=== Updating projects.json ===")
     update_projects_json(json_path, folder_images, folder_videos, dry_run=args.dry_run)

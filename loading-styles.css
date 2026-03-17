@@ -58,37 +58,4 @@
     50% { opacity: 0.6; }
 }
 
-/* ─── Loading Bar ─── */
-#loading-bar-container {
-    position: fixed;
-    top: calc(50% + 22vh);
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(50vw, 300px);
-    height: 4px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
-    overflow: hidden;
-    z-index: 9999;
-    transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
-}
 
-#loading-bar-container.hidden {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-}
-
-#loading-bar-fill {
-    width: 0%;
-    height: 100%;
-    background: linear-gradient(90deg, #94ffe3, #7702ef);
-    border-radius: 2px;
-    transition: width 0.3s ease-out;
-}
-
-@media (max-width: 768px) {
-    #loading-bar-container {
-        width: min(70vw, 260px);
-    }
-}
