@@ -394,8 +394,8 @@ function init() {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 1;
-    controls.maxDistance = 8;
+    controls.minDistance = 0;
+    controls.maxDistance = Infinity;
     controls.target.set(0, 0.5, 0);
 
     // Add mouse event listeners
